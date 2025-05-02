@@ -477,7 +477,7 @@ int main ()
     ON::Begin();
     ON_TextLog error_log;
     ON_TextLog message_log;
-    filename = L"3DM/SixEdges.3dm";
+    filename = L"SixEdges.3dm";
     ONX_Model* model = new ONX_Model();
     INTERNAL_INITIALIZE_MODEL(*model);
 

@@ -1,0 +1,6 @@
+[submodule "thirdparty/opennurbs"]
+	path = thirdparty/opennurbs
+	url = https://github.com/mcneel/opennurbs.git
+[submodule "thirdparty/eigen"]
+	path = thirdparty/eigen
+	url = https://gitlab.com/libeigen/eigen.git
