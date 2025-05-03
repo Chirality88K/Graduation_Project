@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name":"Windows_Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/dump.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Windows_Build"
+        }
+
+    ]
+}

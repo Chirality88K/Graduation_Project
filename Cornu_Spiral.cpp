@@ -1,6 +1,7 @@
 #include "Cornu_Spiral.h"
 #include <assert.h>
 #include "Spiral.h"
+extern const double PI;
 
 Cornu_Spiral::Cornu_Spiral(ON_2dPoint p1, ON_2dPoint p2, ON_2dVector t1, ON_2dVector t2)
 {
@@ -261,4 +262,27 @@ void Cornu_Spiral::Raise_to_3D(double zheight, ONX_Model* model, const wchar_t* 
 	attributes->m_layer_index = layer_index;
 	attributes->m_name = name;
 	model->AddManagedModelGeometryComponent(onc, attributes);
+}
+
+void Cornu_Spiral::Cornu_test(ONX_Model* model)
+{
+	Cornu_Spiral* cs = new Cornu_Spiral(ON_2dPoint(0, 0), ON_2dPoint(10, 0),
+		ON_2dVector(cos(10.0 / 180.0 * PI), -sin(10.0 / 180.0 * PI)),
+		ON_2dVector(cos(15.0 / 180.0 * PI), sin(15.0 / 180.0 * PI))
+	);
+	//cs->Add_to_Model(model, L"test_Cornu_spiral", ON_Color::SaturatedGreen);
+	cs->Add_Nurbs_to_Model(model, L"C_Shape", ON_Color::SaturatedMagenta);
+	cs->Raise_to_3D(2, model, L"C_Shape_Rise2");
+	cs->Raise_to_3D(-6, model, L"C_Shape_Rise-6");
+	cs->Raise_to_3D(10, model, L"C_Shape_Rise10");
+	delete cs;
+	cs = new Cornu_Spiral(ON_2dPoint(0, 0), ON_2dPoint(10, 0),
+		ON_2dVector(-cos(75.0 / 180.0 * PI), sin(75.0 / 180.0 * PI)),
+		ON_2dVector(-cos(15.0 / 180.0 * PI), sin(15.0 / 180.0 * PI))
+	);
+	cs->Add_Nurbs_to_Model(model, L"S_Shape", ON_Color::SaturatedGold);
+	cs->Raise_to_3D(2, model, L"S_Shape_Rise2");
+	cs->Raise_to_3D(-6, model, L"S_Shape_Rise-6");
+	cs->Raise_to_3D(10, model, L"S_Shape_Rise10");
+	delete cs;
 }

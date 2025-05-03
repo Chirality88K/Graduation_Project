@@ -1,5 +1,4 @@
 #include "opennurbs.h"
-
 #include "example_ud.h"
 
 CExampleWriteUserData::CExampleWriteUserData()

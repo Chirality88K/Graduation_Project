@@ -25,5 +25,5 @@ public:
 	void Add_to_Model(ONX_Model* model, const wchar_t* name, ON_Color color = ON_Color::Black);
 	void Add_Nurbs_to_Model(ONX_Model* model, const wchar_t* name, ON_Color color = ON_Color::Black);
 	void Raise_to_3D(double zheight, ONX_Model* model, const wchar_t* name, ON_Color color = ON_Color::Black);
+	static void Cornu_test(ONX_Model* model);
 };
-
