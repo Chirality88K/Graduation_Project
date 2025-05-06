@@ -9,7 +9,7 @@ namespace EulerBezier2D {
 	bool EulerBezierSpiralCheck(const ON_BezierCurve* OBC);
 	void SmoothingBezierControlPolygon(ON_BezierCurve* OBC);
 	void Elevate(ON_BezierCurve* OBC);
-	void EulerBezierSpiralInterpolation(ON_BezierCurve* OBC, int max_vtx_num);
+	void EulerBezierSpiralInterpolation(ON_BezierCurve* OBC, int max_vtx_num = 50);
 	void SmoothingCorner(ON_BezierCurve* OBC, ON_3dPoint Ps, ON_3dPoint O, double alpha);
 	void GenerateSymmetry(ON_BezierCurve* result, const ON_BezierCurve* OBC, ON_3dPoint O, ON_3dVector v);
 	void EulerBezier2dTest(ONX_Model* model);

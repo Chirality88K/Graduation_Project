@@ -2,9 +2,9 @@
 
 namespace EulerBezier2D
 {
-	std::vector<double> ComputeLength(const ON_BezierCurve* OBC)
+	std::vector<double> ComputeLength(const ON_BezierCurve *OBC)
 	{
-		std::vector <double> l;
+		std::vector<double> l;
 		ON_3dPoint p0, p1;
 		for (int i = 1; i < OBC->CVCount(); ++i)
 		{
@@ -15,7 +15,7 @@ namespace EulerBezier2D
 		return l;
 	}
 
-	std::vector<double> ComputeAngle(const ON_BezierCurve* OBC)
+	std::vector<double> ComputeAngle(const ON_BezierCurve *OBC)
 	{
 		std::vector<double> a;
 		ON_3dPoint p0, p1, p2;
@@ -31,8 +31,8 @@ namespace EulerBezier2D
 			v0 = p1 - p0;
 			v1 = p2 - p1;
 			pro = ON_3dVector::DotProduct(v0, v1) / v0.Length() / v1.Length();
-			pro = min(1.0, pro);
-			pro = max(-1.0, pro);
+			pro = (std::min)(1.0, pro);
+			pro = (std::max)(-1.0, pro);
 			angle = acos(pro);
 			if (v0.x * v1.y - v0.y * v1.x < 0)
 			{
@@ -44,7 +44,7 @@ namespace EulerBezier2D
 		return a;
 	}
 
-	bool EulerBezierSpiralCheck(const ON_BezierCurve* OBC)
+	bool EulerBezierSpiralCheck(const ON_BezierCurve *OBC)
 	{
 		int n = OBC->CVCount();
 		int m = n - 1;
@@ -100,7 +100,7 @@ namespace EulerBezier2D
 		}
 	}
 
-	void SmoothingBezierControlPolygon(ON_BezierCurve* OBC)
+	void SmoothingBezierControlPolygon(ON_BezierCurve *OBC)
 	{
 		int m = OBC->CVCount() - 1;
 		if (m <= 3)
@@ -123,12 +123,11 @@ namespace EulerBezier2D
 		OBC->GetCV(0, p0);
 		OBC->GetCV(m, pm);
 		double lengthbound = 2 * (p0 - pm).Length();
+		lengthbound = (std::max)(lengthavg, 10.0);
 
-		while (s_count < max_count
-			&& thetaDD>1e-6
-			&& lengthavg < lengthbound)
+		while (s_count < max_count && thetaDD > 1e-6 && lengthavg < lengthbound)
 		{
-			std::vector <double> new_angle = Angle;
+			std::vector<double> new_angle = Angle;
 
 			for (int i = 2; i < m - 1; i++)
 			{
@@ -176,14 +175,14 @@ namespace EulerBezier2D
 		}
 	}
 
-	void Elevate(ON_BezierCurve* OBC)
+	void Elevate(ON_BezierCurve *OBC)
 	{
 		int n = OBC->CVCount();
 		if (n < 2)
 		{
 			return;
 		}
-		std::vector <ON_3dPoint> parr;
+		std::vector<ON_3dPoint> parr;
 		ON_3dPoint p, q;
 		OBC->GetCV(0, p);
 		parr.push_back(p);
@@ -202,7 +201,7 @@ namespace EulerBezier2D
 		}
 	}
 
-	void EulerBezierSpiralInterpolation(ON_BezierCurve* OBC, int max_vtx_num)
+	void EulerBezierSpiralInterpolation(ON_BezierCurve *OBC, int max_vtx_num)
 	{
 		while (OBC->CVCount() < max_vtx_num && !EulerBezierSpiralCheck(OBC))
 		{
@@ -211,7 +210,7 @@ namespace EulerBezier2D
 		}
 	}
 
-	void SmoothingCorner(ON_BezierCurve* OBC, ON_3dPoint Ps, ON_3dPoint O, double alpha)
+	void SmoothingCorner(ON_BezierCurve *OBC, ON_3dPoint Ps, ON_3dPoint O, double alpha)
 	{
 		int n = 4;
 		ON_3dVector Ts = (O - Ps);
@@ -228,8 +227,8 @@ namespace EulerBezier2D
 				D += temp;
 			}
 			double pro = ON_3dVector::DotProduct(D, Ts) / D.Length();
-			pro = min(1.0, pro);
-			pro = max(-1.0, pro);
+			pro = (std::min)(1.0, pro);
+			pro = (std::max)(-1.0, pro);
 			double beta = acos(pro);
 			double length = cos(alpha / 2) / cos(alpha / 2 - beta) * (O - Ps).Length() / D.Length();
 			temp = Ts * length;
@@ -246,7 +245,7 @@ namespace EulerBezier2D
 		}
 	}
 
-	void GenerateSymmetry(ON_BezierCurve* result, const ON_BezierCurve* OBC, ON_3dPoint O, ON_3dVector v)
+	void GenerateSymmetry(ON_BezierCurve *result, const ON_BezierCurve *OBC, ON_3dPoint O, ON_3dVector v)
 	{
 		v.Unitize();
 		result->Create(2, false, OBC->Order());
@@ -258,7 +257,7 @@ namespace EulerBezier2D
 		}
 	}
 
-	void EulerBezier2dTest(ONX_Model* model)
+	void EulerBezier2dTest(ONX_Model *model)
 	{
 		const int N = 6;
 		ON_3dPoint P[N];
@@ -273,8 +272,8 @@ namespace EulerBezier2D
 		Parray.Append(P[0]);
 		for (int i = 0; i < N; ++i)
 		{
-			ON_BezierCurve* obc0 = new ON_BezierCurve();
-			ON_BezierCurve* obc1 = new ON_BezierCurve();
+			ON_BezierCurve *obc0 = new ON_BezierCurve();
+			ON_BezierCurve *obc1 = new ON_BezierCurve();
 			ON_3dPoint Start = (i == 0) ? P[N - 1] : P[i - 1];
 			ON_3dPoint End = (i == N - 1) ? P[0] : P[i + 1];
 			ON_3dPoint Corner = P[i];
@@ -287,21 +286,22 @@ namespace EulerBezier2D
 				alpha = -alpha;
 			}
 			SmoothingCorner(obc0, Start * (1.0 / 3.0) + Corner * (2.0 / 3.0), Corner, alpha);
-			v0.Unitize(); v1.Unitize();
+			v0.Unitize();
+			v1.Unitize();
 			GenerateSymmetry(obc1, obc0, Corner, v1 - v0);
 
-			ON_NurbsCurve** onc0 = new ON_NurbsCurve * ();
+			ON_NurbsCurve **onc0 = new ON_NurbsCurve *();
 			(*onc0) = new ON_NurbsCurve();
 			obc0->GetNurbForm(**onc0);
-			ON_NurbsCurve** onc1 = new ON_NurbsCurve * ();
+			ON_NurbsCurve **onc1 = new ON_NurbsCurve *();
 			(*onc1) = new ON_NurbsCurve();
 			obc1->GetNurbForm(**onc1);
 
-			ON_3dmObjectAttributes* attributes0 = new ON_3dmObjectAttributes();
+			ON_3dmObjectAttributes *attributes0 = new ON_3dmObjectAttributes();
 			attributes0->m_layer_index = layer_index;
 			attributes0->m_name = (L"EulerBezier_No." + std::to_wstring(i + 1)).c_str();
 			model->AddManagedModelGeometryComponent(*onc0, attributes0);
-			ON_3dmObjectAttributes* attributes1 = new ON_3dmObjectAttributes();
+			ON_3dmObjectAttributes *attributes1 = new ON_3dmObjectAttributes();
 			attributes1->m_layer_index = layer_index;
 			attributes1->m_name = (L"EulerBezier1_No." + std::to_wstring(i + 1)).c_str();
 			model->AddManagedModelGeometryComponent(*onc1, attributes1);
@@ -312,37 +312,38 @@ namespace EulerBezier2D
 			Q[i * 2 + 1] = End * (1.0 / 3.0) + Corner * (2.0 / 3.0);
 		}
 		const int polygon_layer_index = model->AddLayer(L"EulerBezier2dControlPoints", ON_Color::Black);
-		ON_PolylineCurve* opc = new ON_PolylineCurve(ON_Polyline(Parray));
-		ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+		ON_PolylineCurve *opc = new ON_PolylineCurve(ON_Polyline(Parray));
+		ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 		attributes->m_layer_index = polygon_layer_index;
 		attributes->m_name = L"EulerBezier2dControlPoints";
 		model->AddManagedModelGeometryComponent(opc, attributes);
 
 		const int lines_layer_index = model->AddLayer(L"Lines", ON_Color::SaturatedMagenta);
-		ON_3dmObjectAttributes* attributes_lines = new ON_3dmObjectAttributes();
+		ON_3dmObjectAttributes *attributes_lines = new ON_3dmObjectAttributes();
 		attributes_lines->m_layer_index = lines_layer_index;
 		attributes_lines->m_name = L"Lines";
 		for (int i = 0; i < N; ++i)
 		{
 			model->AddManagedModelGeometryComponent(new ON_LineCurve(
-				Q[(2 * i + 1) % (2 * N)], Q[(2 * i + 2) % (2 * N)]), attributes_lines);
+														Q[(2 * i + 1) % (2 * N)], Q[(2 * i + 2) % (2 * N)]),
+													attributes_lines);
 		}
 	}
 
-	void YangMethodtest(ONX_Model* model)
+	void YangMethodtest(ONX_Model *model)
 	{
-		ON_BezierCurve* obc = new ON_BezierCurve(2, false, 4);
+		ON_BezierCurve *obc = new ON_BezierCurve(2, false, 4);
 		obc->SetCV(0, ON_3dPoint(0, 0, 0));
 		obc->SetCV(1, ON_3dPoint(0, -5, 0));
 		obc->SetCV(2, ON_3dPoint(8, -5, 0));
 		obc->SetCV(3, ON_3dPoint(10, 6, 0));
 		EulerBezierSpiralInterpolation(obc, 50);
 
-		ON_NurbsCurve** onc0 = new ON_NurbsCurve * ();
+		ON_NurbsCurve **onc0 = new ON_NurbsCurve *();
 		(*onc0) = new ON_NurbsCurve();
 		obc->GetNurbForm(**onc0);
 		const int layer_index = model->AddLayer(L"Yang", ON_Color::SaturatedMagenta);
-		ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+		ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 		attributes->m_layer_index = layer_index;
 		attributes->m_name = L"yangtest0";
 

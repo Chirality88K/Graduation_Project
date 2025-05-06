@@ -13,6 +13,7 @@
 #include <algorithm>
 #include "EulerBezier2D.h"
 #include "EulerBspline2D.h"
+#include "EulerBezier3D.h"
 #include "write3dm.h"
 const double PI = acos(-1.0);
 
@@ -27,7 +28,7 @@ void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve& onc, string fi
 //int main ( int argc, const char* argv[] )
 int main ()
 {
-    const wchar_t* filename = L"all_test.3dm";
+    const wchar_t* filename = L"EulerBezier3DTest.3dm";
     ON::Begin();
     ONX_Model model;
     INTERNAL_INITIALIZE_MODEL(model);
@@ -85,10 +86,12 @@ int main ()
     pc3d->Add_to_Model(model, L"test_piece_clothoid", ON_Color::SaturatedGreen);
     */
 
-    Cornu_Spiral::Cornu_test(&model);
-    EulerBspline2D::EulerBsplineTest(&model);
-    EulerBezier2D::EulerBezier2dTest(&model);
-    EulerBezier2D::YangMethodtest(&model);
+    //Cornu_Spiral::Cornu_test(&model);
+    //EulerBspline2D::EulerBsplineTest(&model);
+    //EulerBezier2D::EulerBezier2dTest(&model);
+    //EulerBezier2D::YangMethodtest(&model);
+    EulerBezier3D::EulerBezier3DTest(&model);
+
 
    
     ChiralityWrite3dmModel(&model,filename);
