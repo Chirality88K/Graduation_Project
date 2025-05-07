@@ -1,6 +1,3 @@
-#include "opennurbs.h"
-#include "example_ud.h"
-#include "read.h"
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -9,7 +6,7 @@
 #include "PiecesClothoid3d.h"
 #include "Cone_Surface.h"
 #include "Spiral.h"
-#include "Cornu_spiral.h"
+#include "Cornu_Spiral.h"
 #include <algorithm>
 #include "EulerBezier2D.h"
 #include "EulerBspline2D.h"
@@ -28,10 +25,10 @@ void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve& onc, string fi
 //int main ( int argc, const char* argv[] )
 int main ()
 {
-    const wchar_t* filename = L"EulerBezier3DTest.3dm";
+    const wchar_t* filename = L"All_Test.3dm";
     ON::Begin();
     ONX_Model model;
-    INTERNAL_INITIALIZE_MODEL(model);
+    Internal_SetExampleModelProperties(model,OPENNURBS__FUNCTION__,__FILE__);
     model.AddDefaultLayer(nullptr, ON_Color::UnsetColor);
 
     /*
@@ -86,10 +83,10 @@ int main ()
     pc3d->Add_to_Model(model, L"test_piece_clothoid", ON_Color::SaturatedGreen);
     */
 
-    //Cornu_Spiral::Cornu_test(&model);
-    //EulerBspline2D::EulerBsplineTest(&model);
+    Cornu_Spiral::Cornu_test(&model);
+    EulerBspline2D::EulerBsplineTest(&model);
     //EulerBezier2D::EulerBezier2dTest(&model);
-    //EulerBezier2D::YangMethodtest(&model);
+    EulerBezier2D::YangMethodtest(&model);
     EulerBezier3D::EulerBezier3DTest(&model);
 
 

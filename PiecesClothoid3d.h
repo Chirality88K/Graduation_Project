@@ -1,5 +1,6 @@
-#pragma once
-#include "opennurbs.h"
+#ifndef PIECESCLOTHOID3D_H
+#define PIECESCLOTHOID3D_H
+#include "thirdparty/opennurbs/opennurbs.h"
 
 class PiecesClothoid3d
 {
@@ -14,4 +15,4 @@ public:
 	void Add_to_Model(ONX_Model* model, const wchar_t* name, ON_Color color = ON_Color::Black);
 	static double ComputeDisceretCurvature(ON_3dPoint, ON_3dPoint, ON_3dPoint);
 };
-
+#endif

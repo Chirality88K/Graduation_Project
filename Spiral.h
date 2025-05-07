@@ -1,5 +1,6 @@
-#pragma once
-#include <opennurbs.h>
+#ifndef SPIRAL_H
+#define SPIRAL_H
+#include "thirdparty/opennurbs/opennurbs.h"
 
 
 class Spiral
@@ -28,3 +29,4 @@ public:
 
 void ThreeDegreeBsplineInterplate_Tan(ON_NurbsCurve& onc, std::vector <ON_3dPoint> Q, double* knot, ON_3dVector v0, ON_3dVector vn);
 void ThreeDegreeBsplineInterplate_Tan(ON_NurbsCurve& onc, std::vector <ON_3dPoint> Q, std::vector <double> knot, ON_3dVector v0, ON_3dVector vn);
+#endif

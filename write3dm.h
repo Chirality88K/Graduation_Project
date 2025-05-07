@@ -6,7 +6,18 @@
 #include <string>
 
 void ChiralityWrite3dmModel(const ONX_Model* model, const wchar_t* filename);
-
 ON_3dmObjectAttributes* Internal_CreateManagedAttributes(int layer_index, const wchar_t* name);
+#define INTERNAL_INITIALIZE_MODEL(model) Internal_SetExampleModelProperties(model,OPENNURBS__FUNCTION__,__FILE__)
+void Internal_SetExampleModelProperties(
+    ONX_Model& model,
+    const char* function_name,
+    const char* source_file_name
+);
+
+bool Internal_WriteExampleModel(
+    const ONX_Model& model,
+    const wchar_t* filename,
+    ON_TextLog& error_log
+);
 
 #endif
