@@ -1,5 +1,6 @@
-#pragma once
-#include "opennurbs.h"
+#ifndef EULERBEZIER2D_H
+#define EULERBEZIER2D_H
+#include "thirdparty/opennurbs/opennurbs.h"
 #include <vector>
 
 extern const double PI;
@@ -15,3 +16,4 @@ namespace EulerBezier2D {
 	void EulerBezier2dTest(ONX_Model* model);
 	void YangMethodtest(ONX_Model* model);
 }
+#endif

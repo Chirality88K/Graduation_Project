@@ -1,4 +1,4 @@
-#include "EulerBezier2d.h"
+#include "EulerBezier2D.h"
 
 namespace EulerBezier2D
 {

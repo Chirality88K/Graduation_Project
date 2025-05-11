@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name":"Windows_Debug",
+            "name": "Windows_Debug",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/dump.exe",
@@ -11,7 +11,19 @@
             "environment": [],
             "externalConsole": false,
             "preLaunchTask": "Windows_Build"
+        },
+        {
+            "name": "Linux_Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Graduation",
+            "args": [],
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "Linux_Build"
         }
-
     ]
 }

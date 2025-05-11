@@ -1,6 +1,6 @@
 #include "FilletSurface.h"
 #include "example_ud.h"
-#include <Eigen/Dense>
+#include "thirdparty/eigen/Eigen/Dense"
 
 
 FilletSurface::~FilletSurface()

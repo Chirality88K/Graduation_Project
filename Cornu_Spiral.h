@@ -1,5 +1,6 @@
-#pragma once
-#include "opennurbs.h"
+#ifndef CORNU_SPIRAL_H
+#define CORNU_SPIRAL_H
+#include "thirdparty/opennurbs/opennurbs.h"
 
 class Cornu_Spiral
 {
@@ -27,3 +28,4 @@ public:
 	void Raise_to_3D(double zheight, ONX_Model* model, const wchar_t* name, ON_Color color = ON_Color::Black);
 	static void Cornu_test(ONX_Model* model);
 };
+#endif

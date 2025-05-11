@@ -9,6 +9,15 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Linux_Build",
+            "type": "shell",
+            "command": "cd build;cmake ..;make;",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

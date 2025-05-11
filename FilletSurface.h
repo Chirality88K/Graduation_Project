@@ -1,5 +1,6 @@
-#pragma once
-#include <opennurbs.h>
+#ifndef FILLETSURFACE_H
+#define FILLETSURFACE_H
+#include "thirdparty/opennurbs/opennurbs.h"
 #include <vector>
 
 class VectorField1d;
@@ -44,7 +45,7 @@ class VectorField1d
 {
 private:
     ON_NurbsSurface* m_source_surface;
-    bool is_first_const;//true:µÚÒ»¸ö²ÎÊýÊÇ³£Êý
+    bool is_first_const;//true:ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç³ï¿½ï¿½ï¿½
     bool is_curve_reverse;
     bool is_vector_reverse;
     double par;
@@ -53,6 +54,7 @@ public:
     ~VectorField1d();
     void ReverseCurve();
     void ReverseVector();
-    void GetAll(double t, ON_3dPoint& p, ON_3dVector& n, ON_3dVector& v);//µã£¬·¨Ïò£¬ÇÐÏò
+    void GetAll(double t, ON_3dPoint& p, ON_3dVector& n, ON_3dVector& v);//ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     ON_3dVector MixedDer(double t);
 };
+#endif
