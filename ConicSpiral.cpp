@@ -12,7 +12,7 @@ PolarPoint3d::PolarPoint3d(double theta, double phi, double dis)
         theta -= 2 * PI;
     }
     mTheta = theta;
-    phi = std::min(PI / 2, phi);
+    phi = (std::min)(PI / 2, phi);
     phi = (std::max)(-PI / 2, phi);
     mPhi = phi;
 }
@@ -59,8 +59,8 @@ ConicSpiral::ConicSpiral(PolarPoint3d PS, PolarPoint3d PE, ON_3dVector vs, ON_3d
         theta1 += 2 * PI;
     }
     std::vector<PolarPoint3d> polarpoints;
-    double all_theta[mNum_Points];
-    double all_phi[mNum_Points];
+    std::vector <double> all_theta(mNum_Points, 0);
+    std::vector <double> all_phi(mNum_Points, 0);
     for (int i = 0; i < mNum_Points; ++i)
     {
         all_theta[i] = theta0 * (1 - double(i) / double(mNum_Points - 1)) + theta1 * double(i) / double(mNum_Points - 1);

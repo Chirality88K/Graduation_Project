@@ -2,9 +2,18 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Windows_Build",
+            "label": "Windows_Build_VS2022",
             "type": "shell",
-            "command": "cd build; cmake ..;./Graduation.sln",
+            "command": "cd build; cmake -G 'Visual Studio 17 2022' .. ;./Graduation.sln",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Windows_Build_VS2019",
+            "type": "shell",
+            "command": "cd build; cmake -G 'Visual Studio 16 2019' .. ;./Graduation.sln",
             "group": {
                 "kind": "build",
                 "isDefault": true

@@ -2,15 +2,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Windows_Debug",
-            "type": "cppdbg",
+            "name": "Visual Studio 2022",
+            "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceRoot}/dump.exe",
             "args": [],
             "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": false,
-            "preLaunchTask": "Windows_Build"
+            "preLaunchTask": "Windows_Build_VS2022"
+        },
+        {
+            "name": "Visual Studio 2019",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/dump.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Windows_Build_VS2019"
         },
         {
             "name": "Linux_Debug",
