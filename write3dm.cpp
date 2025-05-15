@@ -1,78 +1,242 @@
 #include "write3dm.h"
+#include <fstream>
+#include <iomanip>
+#include <time.h>
 
-void ChiralityWrite3dmModel(const ONX_Model *model, const wchar_t *filename) {
-  ON_TextLog error_log;
-  bool success = model->Write(filename, 0, &error_log);
-  if (success) {
-    std::cout << "Successfully wrote ";
-    std::wcout << std::wstring(filename) << "\n";
-  } else {
-    std::cout << "Fail to wrtie ";
-    std::wcout << std::wstring(filename) << "\n";
-  }
+void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
+{
+	ON_TextLog error_log;
+	wchar_t *const wc = new wchar_t[filename.size()];
+	swprintf(wc, filename.size(), L"%S", filename.c_str());
+	bool success = model->Write(wc, 0, &error_log);
+	if (success)
+	{
+		std::cout << "Successfully wrote ";
+		std::cout << (filename) << "\n";
+	}
+	else
+	{
+		std::cout << "Fail to wrtie ";
+		std::cout << (filename) << "\n";
+	}
+	delete[]wc;
+}
+
+std::string ChiralityPrintNowTime()
+{
+	time_t seconds;
+	time(&seconds);
+	struct tm* p_tm = new tm();
+	localtime_s(p_tm, &seconds);
+	std::string time_string;
+	time_string += std::to_string(1900 + p_tm->tm_year);
+	if (p_tm->tm_mon + 1 < 10)
+	{
+		time_string += "0";
+	}
+	time_string += std::to_string(p_tm->tm_mon + 1);
+	if (p_tm->tm_mday < 10)
+	{
+		time_string += "0";
+	}
+	time_string += std::to_string(p_tm->tm_mday);
+	time_string += "_";
+	if (p_tm->tm_hour < 10)
+	{
+		time_string += "0";
+	}
+	time_string += std::to_string(p_tm->tm_hour);
+	if (p_tm->tm_min < 10)
+	{
+		time_string += "0";
+	}
+	time_string += std::to_string(p_tm->tm_min);
+	time_string += "_";
+	if (p_tm->tm_sec < 10)
+	{
+		time_string += "0";
+	}
+	time_string += std::to_string(p_tm->tm_sec);
+	delete p_tm;
+	return time_string;
 }
 
 ON_3dmObjectAttributes *Internal_CreateManagedAttributes(int layer_index,
-                                                         const wchar_t *name) {
-  ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
-  attributes->m_layer_index = layer_index;
-  attributes->m_name = name;
-  return attributes;
+														 const wchar_t *name)
+{
+	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
+	attributes->m_layer_index = layer_index;
+	attributes->m_name = name;
+	return attributes;
 }
 
 void Internal_SetExampleModelProperties(ONX_Model &model,
-                                        const char *function_name,
-                                        const char *source_file_name) {
-  const bool bHaveFunctionName =
-      (nullptr != function_name && 0 != function_name[0]);
-  if (!bHaveFunctionName)
-    function_name = "";
+										const char *function_name,
+										const char *source_file_name)
+{
+	const bool bHaveFunctionName =
+		(nullptr != function_name && 0 != function_name[0]);
+	if (!bHaveFunctionName)
+		function_name = "";
 
-  const bool bHaveFileName =
-      (nullptr != source_file_name && 0 != source_file_name[0]);
-  if (!bHaveFileName)
-    source_file_name = "";
+	const bool bHaveFileName =
+		(nullptr != source_file_name && 0 != source_file_name[0]);
+	if (!bHaveFileName)
+		source_file_name = "";
 
-  model.m_sStartSectionComments =
-      "This was file created by OpenNURBS toolkit example code.";
+	model.m_sStartSectionComments =
+		"This was file created by OpenNURBS toolkit example code.";
 
-  // set application information
-  const ON_wString wide_function_name(function_name);
-  const ON_wString wide_source_file_name(source_file_name);
-  model.m_properties.m_Application.m_application_name =
-      bHaveFunctionName ? ON_wString::FormatToString(
-                              L"OpenNURBS toolkit Example: %ls() function",
-                              static_cast<const wchar_t *>(wide_function_name))
-                        : ON_wString(L"OpenNURBS Examples");
+	// set application information
+	const ON_wString wide_function_name(function_name);
+	const ON_wString wide_source_file_name(source_file_name);
+	model.m_properties.m_Application.m_application_name =
+		bHaveFunctionName ? ON_wString::FormatToString(
+								L"OpenNURBS toolkit Example: %ls() function",
+								static_cast<const wchar_t *>(wide_function_name))
+						  : ON_wString(L"OpenNURBS Examples");
 
-  model.m_properties.m_Application.m_application_URL =
-      L"http://www.opennurbs.org";
-  model.m_properties.m_Application.m_application_details =
-      bHaveFileName ? ON_wString::FormatToString(
-                          L"Opennurbs examples are in the file %ls.",
-                          static_cast<const wchar_t *>(wide_source_file_name))
-                    : ON_wString::FormatToString(
-                          L"Opennurbs examples are example_*.cpp files.");
+	model.m_properties.m_Application.m_application_URL =
+		L"http://www.opennurbs.org";
+	model.m_properties.m_Application.m_application_details =
+		bHaveFileName ? ON_wString::FormatToString(
+							L"Opennurbs examples are in the file %ls.",
+							static_cast<const wchar_t *>(wide_source_file_name))
+					  : ON_wString::FormatToString(
+							L"Opennurbs examples are example_*.cpp files.");
 
-  // some notes
-  if (bHaveFunctionName && bHaveFileName) {
-    model.m_properties.m_Notes.m_notes = ON_wString::FormatToString(
-        L"This .3dm file was made with the OpenNURBS toolkit example function "
-        L"%s() defined in source code file %ls.",
-        static_cast<const wchar_t *>(wide_function_name),
-        static_cast<const wchar_t *>(wide_source_file_name));
-    model.m_properties.m_Notes.m_bVisible =
-        model.m_properties.m_Notes.m_notes.IsNotEmpty();
-  }
+	// some notes
+	if (bHaveFunctionName && bHaveFileName)
+	{
+		model.m_properties.m_Notes.m_notes = ON_wString::FormatToString(
+			L"This .3dm file was made with the OpenNURBS toolkit example function "
+			L"%s() defined in source code file %ls.",
+			static_cast<const wchar_t *>(wide_function_name),
+			static_cast<const wchar_t *>(wide_source_file_name));
+		model.m_properties.m_Notes.m_bVisible =
+			model.m_properties.m_Notes.m_notes.IsNotEmpty();
+	}
 
-  // set revision history information
-  model.m_properties.m_RevisionHistory.NewRevision();
+	// set revision history information
+	model.m_properties.m_RevisionHistory.NewRevision();
 }
 
 bool Internal_WriteExampleModel(const ONX_Model &model, const wchar_t *filename,
-                                ON_TextLog &error_log) {
-  int version = 0;
+								ON_TextLog &error_log)
+{
+	int version = 0;
 
-  // writes model to archive
-  return model.Write(filename, version, &error_log);
+	// writes model to archive
+	return model.Write(filename, version, &error_log);
+}
+
+void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename)
+{
+	double k0 = 0;
+	double kn = 1;
+	double t = 0;
+	double kappa = 0;
+	double lastkappa = 0;
+	ON_3dVector v1;
+	ON_3dVector v2;
+	ON_3dVector v3;
+	ON_3dPoint dump;
+	if (onc.Dimension() == 2)
+	{
+		std::ofstream ofs(filename);
+		for (int i = 0; i <= 1000; i++)
+		{
+			t = (kn - k0) / 1000 * i + k0;
+			onc.Ev2Der(t, dump, v1, v2);
+			kappa = v1.x * v2.y - v1.y * v2.x;
+			kappa = kappa / pow(v1.Length(), 3);
+			ofs << std::fixed << std::setprecision(6) << t << "\t" << kappa;
+			if (i > 0)
+			{
+				ofs << "\t" << std::fixed << std::setprecision(6) << (kappa - lastkappa);
+			}
+			ofs << std::endl;
+			lastkappa = kappa;
+		}
+		ofs.close();
+		std::cout << filename + " 2-dimension bezier curve curvatures written!" << std::endl;
+		return;
+	}
+	if (onc.Dimension() == 3)
+	{
+		std::ofstream ofs(filename);
+		for (int i = 0; i <= 1000; i++)
+		{
+			t = (kn - k0) / 1000 * i + k0;
+			onc.Ev2Der(t, dump, v1, v2);
+			kappa = onc.CurvatureAt(t).Length();
+			ofs << std::fixed << std::setprecision(6) << t << "\t" << kappa;
+			if (i > 0)
+			{
+				ofs << "\t" << std::fixed << std::setprecision(6) << (kappa - lastkappa);
+			}
+			ofs << std::endl;
+			lastkappa = kappa;
+		}
+		ofs.close();
+		std::cout << filename + " 3-dimension bezier curve curvatures written!" << std::endl;
+		return;
+	}
+	std::cout << "Fail to write curvatures: " + filename << std::endl;
+}
+
+void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename)
+{
+	double k0 = 0;
+	double kn = 1;
+	onc.GetDomain(&k0, &kn);
+	double t = 0;
+	double kappa = 0;
+	double lastkappa = 0;
+	ON_3dVector v1;
+	ON_3dVector v2;
+	ON_3dVector v3;
+	ON_3dPoint dump;
+	if (onc.Dimension() == 2)
+	{
+		std::ofstream ofs(filename);
+		for (int i = 0; i <= 1000; i++)
+		{
+			t = (kn - k0) / 1000 * i + k0;
+			onc.Ev2Der(t, dump, v1, v2);
+			kappa = v1.x * v2.y - v1.y * v2.x;
+			kappa = kappa / pow(v1.Length(), 3);
+			ofs << std::fixed << std::setprecision(6) << t << "\t" << kappa;
+			if (i > 0)
+			{
+				ofs << "\t" << std::fixed << std::setprecision(6) << (kappa - lastkappa);
+			}
+			ofs << std::endl;
+			lastkappa = kappa;
+		}
+		ofs.close();
+		std::cout << filename + " 2-dimension nurbs curve curvatures written!" << std::endl;
+		return;
+	}
+	if (onc.Dimension() == 3)
+	{
+		std::ofstream ofs(filename);
+		for (int i = 0; i <= 1000; i++)
+		{
+			t = (kn - k0) / 1000 * i + k0;
+			onc.Ev2Der(t, dump, v1, v2);
+			kappa = onc.CurvatureAt(t).Length();
+			ofs << std::fixed << std::setprecision(6) << t << "\t" << kappa;
+			if (i > 0)
+			{
+				ofs << "\t" << std::fixed << std::setprecision(6) << (kappa - lastkappa);
+			}
+			ofs << std::endl;
+			lastkappa = kappa;
+		}
+		ofs.close();
+		std::cout << filename + " 3-dimension nurbs curve curvatures written!" << std::endl;
+		return;
+	}
+	std::cout << "Fail to write curvatures: " + filename << std::endl;
 }

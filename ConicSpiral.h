@@ -17,6 +17,8 @@ class ConicSpiral
 {
 public:
     ConicSpiral(PolarPoint3d PS, PolarPoint3d PE, ON_3dVector vs, ON_3dVector ve, int num = 50);
+    static void ConicSpiralTest(ONX_Model *model);
+
 private:
     int mNum_Points;
     std::vector<ON_3dPoint> mDiscretePolygon;

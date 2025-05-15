@@ -58,11 +58,35 @@ ConicSpiral::ConicSpiral(PolarPoint3d PS, PolarPoint3d PE, ON_3dVector vs, ON_3d
     {
         theta1 += 2 * PI;
     }
-    std::vector<PolarPoint3d> polarpoints;
-    std::vector <double> all_theta(mNum_Points, 0);
-    std::vector <double> all_phi(mNum_Points, 0);
+    std::vector<double> all_theta(mNum_Points, 0);
+    std::vector<double> all_distance_to_Z(mNum_Points, 0);
+    std::vector<double> all_z_coor(mNum_Points, 0);
     for (int i = 0; i < mNum_Points; ++i)
     {
         all_theta[i] = theta0 * (1 - double(i) / double(mNum_Points - 1)) + theta1 * double(i) / double(mNum_Points - 1);
     }
+    double dis0 = PS.mDistance * cos(PS.mPhi);
+    double dis1 = PE.mDistance * cos(PE.mPhi);
+    double B = log(dis1 / dis0) / (theta1 - theta0);
+    double A = (theta1 * log(dis0) - theta0 * log(dis1)) / (theta1 - theta0);
+    for (int i = 0; i < mNum_Points; ++i)
+    {
+        all_distance_to_Z[i] = A * exp(B * all_theta[i]);
+    }
+    double z0 = PS.mDistance * sin(PS.mPhi);
+    double z1 = PE.mDistance * sin(PE.mPhi);
+    double D = log(z1 / z0) / (theta1 - theta0);
+    double C = (theta1 * log(z0) - theta0 * log(z1)) / (theta1 - theta0);
+    for (int i = 0; i < mNum_Points; ++i)
+    {
+        all_z_coor[i] = C * exp(D * all_theta[i]);
+    }
+    for (int i = 0; i < mNum_Points; ++i)
+    {
+        mDiscretePolygon.push_back(ON_3dPoint(all_distance_to_Z[i] * cos(all_theta[i]), all_distance_to_Z[i] * sin(all_theta[i]), all_z_coor[i]));
+    }
+}
+
+void ConicSpiral::ConicSpiralTest(ONX_Model *model)
+{
 }

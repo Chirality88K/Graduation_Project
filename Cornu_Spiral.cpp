@@ -1,13 +1,15 @@
 #include "Cornu_Spiral.h"
 #include <assert.h>
 #include "Spiral.h"
+#include "write3dm.h"
 extern const double PI;
 
 Cornu_Spiral::Cornu_Spiral(ON_2dPoint p1, ON_2dPoint p2, ON_2dVector t1, ON_2dVector t2)
 {
 	ON_2dVector D = p2 - p1;
 	double length = D.Length();
-	t1.Unitize(); t2.Unitize();
+	t1.Unitize();
+	t2.Unitize();
 	double product1 = (t1.x * D.x + t1.y * D.y) / length;
 	assert(product1 > -1 && product1 < 1);
 	double phi1 = acos(product1);
@@ -26,7 +28,7 @@ Cornu_Spiral::Cornu_Spiral(ON_2dPoint p1, ON_2dPoint p2, ON_2dVector t1, ON_2dVe
 	{
 		double theta = MidSection_f(phi1, phi2);
 		m_a = length / ((Compute_S(theta + phi1 + phi2) - Compute_S(theta)) * sin(theta + phi1) +
-			(Compute_C(theta + phi1 + phi2) - Compute_C(theta)) * cos(theta + phi1));
+						(Compute_C(theta + phi1 + phi2) - Compute_C(theta)) * cos(theta + phi1));
 		m_T0 = t1;
 		m_T0.Rotate(-theta);
 		m_N0 = m_T0;
@@ -35,12 +37,11 @@ Cornu_Spiral::Cornu_Spiral(ON_2dPoint p1, ON_2dPoint p2, ON_2dVector t1, ON_2dVe
 		m_theta0 = theta;
 		m_theta1 = theta + phi1 + phi2;
 	}
-	if ((0 < phi1 && phi1 < phi2 && h_phi1_phi2 > 0)
-		|| (phi1 <= 0))
+	if ((0 < phi1 && phi1 < phi2 && h_phi1_phi2 > 0) || (phi1 <= 0))
 	{
 		double omega = MidSection_g(phi1, phi2);
 		m_a = length / ((Compute_S(omega + phi1 + phi2) + Compute_S(omega)) * sin(omega + phi1) +
-			(Compute_C(omega + phi1 + phi2) + Compute_C(omega)) * cos(omega + phi1));
+						(Compute_C(omega + phi1 + phi2) + Compute_C(omega)) * cos(omega + phi1));
 		m_T0 = t1;
 		m_T0.Rotate(-omega);
 		m_N0 = m_T0;
@@ -78,13 +79,13 @@ double Cornu_Spiral::Compute_S(double theta)
 double Cornu_Spiral::Compute_f(double theta, double phi1, double phi2)
 {
 	return (Compute_S(theta + phi1 + phi2) - Compute_S(theta)) * cos(theta + phi1) -
-		(Compute_C(theta + phi1 + phi2) - Compute_C(theta)) * sin(theta + phi1);
+		   (Compute_C(theta + phi1 + phi2) - Compute_C(theta)) * sin(theta + phi1);
 }
 
 double Cornu_Spiral::Compute_g(double omega, double phi1, double phi2)
 {
 	return (Compute_S(omega + phi1 + phi2) + Compute_S(omega)) * cos(omega + phi1) -
-		(Compute_C(omega + phi1 + phi2) + Compute_C(omega)) * sin(omega + phi1);
+		   (Compute_C(omega + phi1 + phi2) + Compute_C(omega)) * sin(omega + phi1);
 }
 
 double Cornu_Spiral::MidSection_f(double phi1, double phi2)
@@ -154,7 +155,7 @@ double Cornu_Spiral::MidSection_g(double phi1, double phi2)
 	}
 }
 
-void Cornu_Spiral::Add_to_Model(ONX_Model* model, const wchar_t* name, ON_Color color)
+void Cornu_Spiral::Add_to_Model(ONX_Model *model, const wchar_t *name, ON_Color color)
 {
 	ON_3dPointArray list;
 	int n = 500;
@@ -166,21 +167,21 @@ void Cornu_Spiral::Add_to_Model(ONX_Model* model, const wchar_t* name, ON_Color 
 		list.Append(p);
 	}
 	ON_Polyline pl = list;
-	ON_PolylineCurve* pc = new ON_PolylineCurve(pl);
+	ON_PolylineCurve *pc = new ON_PolylineCurve(pl);
 	const int layer_index = model->AddLayer(name, color);
-	ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 	attributes->m_layer_index = layer_index;
 	attributes->m_name = name;
 	model->AddManagedModelGeometryComponent(pc, attributes);
 }
 
-void Cornu_Spiral::Add_Nurbs_to_Model(ONX_Model* model, const wchar_t* name, ON_Color color)
+void Cornu_Spiral::Add_Nurbs_to_Model(ONX_Model *model, const wchar_t *name, ON_Color color)
 {
 	int n = 1000;
 	double theta = 0;
 	double s0 = GetSignedArcLength(m_theta0);
-	std::vector <ON_3dPoint> pv;
-	std::vector <double> knot;
+	std::vector<ON_3dPoint> pv;
+	std::vector<double> knot;
 	for (int i = 0; i <= 20; i++)
 	{
 		theta = (m_theta1 - m_theta0) / n * i * 50 + m_theta0;
@@ -188,12 +189,12 @@ void Cornu_Spiral::Add_Nurbs_to_Model(ONX_Model* model, const wchar_t* name, ON_
 		pv.push_back(p);
 		knot.push_back(GetSignedArcLength(theta) - s0);
 	}
-	ON_NurbsCurve* onc = new ON_NurbsCurve();
+	ON_NurbsCurve *onc = new ON_NurbsCurve();
 	ON_2dVector T1 = GetTangent(m_theta0);
 	ON_2dVector T2 = GetTangent(m_theta1);
 	ThreeDegreeBsplineInterplate_Tan(*onc, pv, knot, T1, T2);
 	const int layer_index = model->AddLayer(name, color);
-	ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 	attributes->m_layer_index = layer_index;
 	attributes->m_name = name;
 	model->AddManagedModelGeometryComponent(onc, attributes);
@@ -235,15 +236,15 @@ double Cornu_Spiral::GetSignedCurvature(double theta)
 	return -sqrt(-2 * theta * acos(-1.0)) / m_a;
 }
 
-void Cornu_Spiral::Raise_to_3D(double zheight, ONX_Model* model, const wchar_t* name, ON_Color color)
+void Cornu_Spiral::Raise_to_3D(double zheight, ONX_Model *model, const wchar_t *name, ON_Color color)
 {
 	double s0 = GetSignedArcLength(m_theta0);
 	double L = GetSignedArcLength(m_theta1) - s0;
 	int n = 1000;
 	double theta = 0;
 	double s = 0;
-	std::vector <ON_3dPoint> pv;
-	std::vector <double> knot;
+	std::vector<ON_3dPoint> pv;
+	std::vector<double> knot;
 	for (int i = 0; i <= 20; i++)
 	{
 		theta = (m_theta1 - m_theta0) / n * i * 50 + m_theta0;
@@ -253,33 +254,32 @@ void Cornu_Spiral::Raise_to_3D(double zheight, ONX_Model* model, const wchar_t* 
 		pv.push_back(p);
 		knot.push_back(s);
 	}
-	ON_NurbsCurve* onc = new ON_NurbsCurve();
+	ON_NurbsCurve *onc = new ON_NurbsCurve();
 	ON_2dVector T1 = GetTangent(m_theta0);
 	ON_2dVector T2 = GetTangent(m_theta1);
 	ThreeDegreeBsplineInterplate_Tan(*onc, pv, knot, T1, T2);
 	const int layer_index = model->AddLayer(name, color);
-	ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 	attributes->m_layer_index = layer_index;
 	attributes->m_name = name;
 	model->AddManagedModelGeometryComponent(onc, attributes);
+	PrintCurvature(*onc, "rise " + std::to_string(zheight) + " curvature");
 }
 
-void Cornu_Spiral::Cornu_test(ONX_Model* model)
+void Cornu_Spiral::Cornu_test(ONX_Model *model)
 {
-	Cornu_Spiral* cs = new Cornu_Spiral(ON_2dPoint(0, 0), ON_2dPoint(10, 0),
-		ON_2dVector(cos(10.0 / 180.0 * PI), -sin(10.0 / 180.0 * PI)),
-		ON_2dVector(cos(15.0 / 180.0 * PI), sin(15.0 / 180.0 * PI))
-	);
-	//cs->Add_to_Model(model, L"test_Cornu_spiral", ON_Color::SaturatedGreen);
+	Cornu_Spiral *cs = new Cornu_Spiral(ON_2dPoint(0, 0), ON_2dPoint(10, 0),
+										ON_2dVector(cos(10.0 / 180.0 * PI), -sin(10.0 / 180.0 * PI)),
+										ON_2dVector(cos(15.0 / 180.0 * PI), sin(15.0 / 180.0 * PI)));
+	// cs->Add_to_Model(model, L"test_Cornu_spiral", ON_Color::SaturatedGreen);
 	cs->Add_Nurbs_to_Model(model, L"C_Shape", ON_Color::SaturatedMagenta);
 	cs->Raise_to_3D(2, model, L"C_Shape_Rise2");
 	cs->Raise_to_3D(-6, model, L"C_Shape_Rise-6");
 	cs->Raise_to_3D(10, model, L"C_Shape_Rise10");
 	delete cs;
 	cs = new Cornu_Spiral(ON_2dPoint(0, 0), ON_2dPoint(10, 0),
-		ON_2dVector(-cos(75.0 / 180.0 * PI), sin(75.0 / 180.0 * PI)),
-		ON_2dVector(-cos(15.0 / 180.0 * PI), sin(15.0 / 180.0 * PI))
-	);
+						  ON_2dVector(-cos(75.0 / 180.0 * PI), sin(75.0 / 180.0 * PI)),
+						  ON_2dVector(-cos(15.0 / 180.0 * PI), sin(15.0 / 180.0 * PI)));
 	cs->Add_Nurbs_to_Model(model, L"S_Shape", ON_Color::SaturatedGold);
 	cs->Raise_to_3D(2, model, L"S_Shape_Rise2");
 	cs->Raise_to_3D(-6, model, L"S_Shape_Rise-6");

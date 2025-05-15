@@ -16,19 +16,19 @@ const double PI = acos(-1.0);
 
 using namespace std;
 
-void Add_Cylinder(ONX_Model* model, const wchar_t* name, double radius = 1, double height = 2, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
-void Add_Circle(ONX_Model* model, const wchar_t* name, double radius = 1, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
-void Add_Ball(ONX_Model* model, const wchar_t* name, double radius = 1, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
-void Add_BezierCurve(ONX_Model* model, const wchar_t* name, const ON_BezierCurve* bc, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
-void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve& onc, string filename);
+void Add_Cylinder(ONX_Model *model, const wchar_t *name, double radius = 1, double height = 2, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
+void Add_Circle(ONX_Model *model, const wchar_t *name, double radius = 1, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
+void Add_Ball(ONX_Model *model, const wchar_t *name, double radius = 1, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
+void Add_BezierCurve(ONX_Model *model, const wchar_t *name, const ON_BezierCurve *bc, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
+void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string filename);
 
-//int main ( int argc, const char* argv[] )
-int main ()
+// int main ( int argc, const char* argv[] )
+int main()
 {
-    const wchar_t* filename = L"All_Test.3dm";
+    const std::string filename = "Cornu_spiral_Test-" + ChiralityPrintNowTime() + ".3dm";
     ON::Begin();
     ONX_Model model;
-    Internal_SetExampleModelProperties(model,OPENNURBS__FUNCTION__,__FILE__);
+    Internal_SetExampleModelProperties(model, OPENNURBS__FUNCTION__, __FILE__);
     model.AddDefaultLayer(nullptr, ON_Color::UnsetColor);
 
     /*
@@ -84,19 +84,16 @@ int main ()
     */
 
     Cornu_Spiral::Cornu_test(&model);
-    EulerBspline2D::EulerBsplineTest(&model);
-    //EulerBezier2D::EulerBezier2dTest(&model);
-    EulerBezier2D::YangMethodtest(&model);
-    EulerBezier3D::EulerBezier3DTest(&model);
+    // EulerBspline2D::EulerBsplineTest(&model);
+    //  EulerBezier2D::EulerBezier2dTest(&model);
+    // EulerBezier2D::YangMethodtest(&model);
+    // EulerBezier3D::EulerBezier3DTest(&model);
 
-
-   
-    ChiralityWrite3dmModel(&model,filename);
-  return 0;
+    ChiralityWrite3dmModel(&model, filename);
+    return 0;
 }
 
-
-void Add_Cylinder(ONX_Model* model, const wchar_t* name, double radius, double height, ON_Color color, ON_Xform xform)
+void Add_Cylinder(ONX_Model *model, const wchar_t *name, double radius, double height, ON_Color color, ON_Xform xform)
 {
     const int bIsRational = true;
     const int dim = 3;
@@ -104,8 +101,8 @@ void Add_Cylinder(ONX_Model* model, const wchar_t* name, double radius, double h
     const int v_degree = 1;
     const int u_cv_count = 7;
     const int v_cv_count = 2;
-    double u_knot[u_cv_count + u_degree - 1] = { 0,0,1.0 / 3,1.0 / 3,2.0 / 3,2.0 / 3,1,1 };
-    double v_knot[v_cv_count + v_degree - 1] = { 0,1 };
+    double u_knot[u_cv_count + u_degree - 1] = {0, 0, 1.0 / 3, 1.0 / 3, 2.0 / 3, 2.0 / 3, 1, 1};
+    double v_knot[v_cv_count + v_degree - 1] = {0, 1};
     ON_3dPoint CV[u_cv_count][v_cv_count];
     for (int k = -1; k < 2; k = k + 2)
     {
@@ -118,11 +115,11 @@ void Add_Cylinder(ONX_Model* model, const wchar_t* name, double radius, double h
         CV[5][y].Set(radius * sqrt(3), -radius, k * height / 2);
         CV[6][y].Set(0, -radius, k * height / 2);
     }
-    double w[7] = { 1,0.5,1,0.5,1,0.5,1 };
+    double w[7] = {1, 0.5, 1, 0.5, 1, 0.5, 1};
 
     ON_NurbsSurface nurbs_surface(dim, bIsRational,
-        u_degree + 1, v_degree + 1,
-        u_cv_count, v_cv_count);
+                                  u_degree + 1, v_degree + 1,
+                                  u_cv_count, v_cv_count);
     int i, j;
     for (i = 0; i < nurbs_surface.KnotCount(0); i++)
     {
@@ -143,7 +140,7 @@ void Add_Cylinder(ONX_Model* model, const wchar_t* name, double radius, double h
         }
     }
     nurbs_surface.Transform(xform);
-    ON_NurbsSurface** nubs = new ON_NurbsSurface * ();
+    ON_NurbsSurface **nubs = new ON_NurbsSurface *();
     *nubs = new ON_NurbsSurface(nurbs_surface);
     model->AddDefaultLayer(nullptr, ON_Color::UnsetColor);
     const int layer_index = model->AddLayer(name, color);
@@ -153,13 +150,13 @@ void Add_Cylinder(ONX_Model* model, const wchar_t* name, double radius, double h
     delete nubs;
 }
 
-void Add_Circle(ONX_Model* model, const wchar_t* name, double radius, ON_Color color, ON_Xform xform)
+void Add_Circle(ONX_Model *model, const wchar_t *name, double radius, ON_Color color, ON_Xform xform)
 {
-    ON_NurbsCurve* wiggle = new ON_NurbsCurve(
-        3, // dimension
+    ON_NurbsCurve *wiggle = new ON_NurbsCurve(
+        3,    // dimension
         true, // true if rational
-        3,     // order = degree+1
-        7      // number of control vertices
+        3,    // order = degree+1
+        7     // number of control vertices
     );
     int i;
 
@@ -171,7 +168,7 @@ void Add_Circle(ONX_Model* model, const wchar_t* name, double radius, ON_Color c
     CV[4].Set(radius * sqrt(3) / 2, radius / 2, 0);
     CV[5].Set(radius * sqrt(3), -radius, 0);
     CV[6].Set(0, -radius, 0);
-    double weight[7] = { 1,0.5,1,0.5,1,0.5,1 };
+    double weight[7] = {1, 0.5, 1, 0.5, 1, 0.5, 1};
 
     for (i = 0; i < 7; i++)
     {
@@ -188,9 +185,9 @@ void Add_Circle(ONX_Model* model, const wchar_t* name, double radius, ON_Color c
     wiggle->SetKnot(6, 1.0);
     wiggle->SetKnot(7, 1.0);
 
-    //model->AddManagedModelGeometryComponent(wiggle, nullptr);
+    // model->AddManagedModelGeometryComponent(wiggle, nullptr);
     wiggle->Transform(xform);
-    ON_NurbsCurve** nubs = new ON_NurbsCurve * ();
+    ON_NurbsCurve **nubs = new ON_NurbsCurve *();
     *nubs = new ON_NurbsCurve(*wiggle);
     model->AddDefaultLayer(nullptr, ON_Color::UnsetColor);
     const int layer_index = model->AddLayer(name, color);
@@ -201,7 +198,7 @@ void Add_Circle(ONX_Model* model, const wchar_t* name, double radius, ON_Color c
     delete wiggle;
 }
 
-void Add_Ball(ONX_Model* model, const wchar_t* name, double radius, ON_Color color, ON_Xform xform)
+void Add_Ball(ONX_Model *model, const wchar_t *name, double radius, ON_Color color, ON_Xform xform)
 {
     const int bIsRational = true;
     const int dim = 3;
@@ -209,12 +206,15 @@ void Add_Ball(ONX_Model* model, const wchar_t* name, double radius, ON_Color col
     const int v_degree = 2;
     const int u_cv_count = 7;
     const int v_cv_count = 4;
-    double u_knot[u_cv_count + u_degree - 1] = { 0,0,0.25,0.5,0.5,0.75,1,1 };
-    double v_knot[v_cv_count + v_degree - 1] = { 0, 0, 0.5, 1, 1 };
+    double u_knot[u_cv_count + u_degree - 1] = {0, 0, 0.25, 0.5, 0.5, 0.75, 1, 1};
+    double v_knot[v_cv_count + v_degree - 1] = {0, 0, 0.5, 1, 1};
     ON_3dPoint CV[u_cv_count][v_cv_count];
     double weight[u_cv_count][v_cv_count];
-    weight[0][0] = 1; weight[0][1] = 0.5; weight[0][2] = 0.5; weight[0][3] = 1;
-  
+    weight[0][0] = 1;
+    weight[0][1] = 0.5;
+    weight[0][2] = 0.5;
+    weight[0][3] = 1;
+
     int i, j;
     for (i = 0; i < u_cv_count; i++)
     {
@@ -255,8 +255,8 @@ void Add_Ball(ONX_Model* model, const wchar_t* name, double radius, ON_Color col
     CV[6][2] = ON_3dPoint(radius, 0, radius) * weight[6][2];
 
     ON_NurbsSurface nurbs_surface(dim, bIsRational,
-        u_degree + 1, v_degree + 1,
-        u_cv_count, v_cv_count);
+                                  u_degree + 1, v_degree + 1,
+                                  u_cv_count, v_cv_count);
     for (i = 0; i < nurbs_surface.KnotCount(0); i++)
     {
         nurbs_surface.SetKnot(0, i, u_knot[i]);
@@ -276,7 +276,7 @@ void Add_Ball(ONX_Model* model, const wchar_t* name, double radius, ON_Color col
         }
     }
     nurbs_surface.Transform(xform);
-    ON_NurbsSurface** nubs = new ON_NurbsSurface * ();
+    ON_NurbsSurface **nubs = new ON_NurbsSurface *();
     *nubs = new ON_NurbsSurface(nurbs_surface);
     model->AddDefaultLayer(nullptr, ON_Color::UnsetColor);
     const int layer_index = model->AddLayer(name, color);
@@ -286,9 +286,9 @@ void Add_Ball(ONX_Model* model, const wchar_t* name, double radius, ON_Color col
     delete nubs;
 }
 
-void Add_BezierCurve(ONX_Model* model, const wchar_t* name, const ON_BezierCurve* bc, ON_Color color, ON_Xform xform)
+void Add_BezierCurve(ONX_Model *model, const wchar_t *name, const ON_BezierCurve *bc, ON_Color color, ON_Xform xform)
 {
-    ON_NurbsCurve** onc = new ON_NurbsCurve * ();
+    ON_NurbsCurve **onc = new ON_NurbsCurve *();
     (*onc) = new ON_NurbsCurve();
     bc->GetNurbForm(**onc);
     (*onc)->Transform(xform);
@@ -299,20 +299,20 @@ void Add_BezierCurve(ONX_Model* model, const wchar_t* name, const ON_BezierCurve
     delete onc;
 }
 
-void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve& onc, string filename)
+void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string filename)
 {
-    const double* knot = onc.Knot();
+    const double *knot = onc.Knot();
     int size = onc.KnotCount();
     double k0 = *knot;
     double kn = *(knot + size - 1);
     double t = 0;
     double kappa = 0;
-    //double torsion = 0;
+    // double torsion = 0;
     ofstream ofs(filename);
     ON_3dPoint r;
     ON_3dVector r1;
     ON_3dVector r2;
-    //ON_3dVector r3;
+    // ON_3dVector r3;
     for (int i = 0; i <= 1000; i++)
     {
         t = (kn - k0) / 1000 * i + k0;

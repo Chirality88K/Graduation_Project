@@ -1,6 +1,8 @@
 #include "EulerBezier3D.h"
 #include "EulerBezier2D.h"
 #include "thirdparty/eigen/Eigen/Dense"
+#include "write3dm.h"
+#include <fstream>
 using namespace std;
 
 const int iteration_times = 30;
@@ -306,6 +308,7 @@ void EulerBezier3D::EulerBezier3DTest(ONX_Model *model)
     //attributes2->m_name = L"part2";
     //model->AddManagedModelGeometryComponent(onc2, attributes2);
     onc1->Append(*onc2);
+    PrintCurvature(*onc1,"2DCurvesCurvature.txt");
     ON_3dmObjectAttributes* attributes1 = new ON_3dmObjectAttributes();
     attributes1->m_layer_index = layer_index1;
     attributes1->m_name = L"part1";
@@ -327,10 +330,9 @@ void EulerBezier3D::EulerBezier3DTest(ONX_Model *model)
         onc3->SetKnot(i, *(k0 + i));
     }
     Rise_to_3D(onc3, ON_3dPoint(0, 0, 10), ON_3dVector(5, 0, -1), ON_3dVector(1, -sqrt(3), 1));
+    PrintCurvature(*onc3,"3DCurvesCurvature.txt");
     ON_3dmObjectAttributes* attributes2 = new ON_3dmObjectAttributes();
     attributes2->m_layer_index = layer_index1;
     attributes2->m_name = L"part2";
     model->AddManagedModelGeometryComponent(onc3, attributes2);
-
-    
 }
