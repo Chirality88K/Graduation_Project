@@ -7,6 +7,7 @@ class EulerBezier3D : public ON_BezierCurve
 {
 public:
 	EulerBezier3D();
+	EulerBezier3D(ON_3dVector vs,ON_3dVector ve,double length);
 	void Smoothing();
 	static void EulerBezier3DTest(ONX_Model *model);
 	static ON_3dPoint GetBallCenter(ON_3dPoint p0, ON_3dPoint p1, ON_3dVector t0, ON_3dVector t1);

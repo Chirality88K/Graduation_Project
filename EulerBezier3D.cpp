@@ -11,11 +11,49 @@ EulerBezier3D::EulerBezier3D()
 {
 }
 
-int sign(double x) {
-    if (x > 1e-6) {
+EulerBezier3D::EulerBezier3D(ON_3dVector vs, ON_3dVector ve, double length)
+{
+    vs.Unitize();
+    ve.Unitize();
+    ON_3dVector normal(0, vs.z - ve.z, ve.y - vs.y);
+    normal.Unitize();
+    ON_3dVector new_vs = vs - ON_3dVector::DotProduct(vs, normal) * normal;
+    ON_3dVector new_ve = ve - ON_3dVector::DotProduct(ve, normal) * normal;
+    new_vs.Unitize();
+    new_ve.Unitize();
+    ON_Plane realplane(ON_3dPoint(0, 0, 0), normal);
+    ON_Plane xyplane(ON_3dPoint(0, 0, 0), ON_3dVector(0, 0, 1));
+    ON_Xform rotate;
+    rotate.Rotation(realplane, xyplane);
+    vs.Transform(rotate);
+    ve.Transform(rotate);
+    new_vs.Transform(rotate);
+    new_ve.Transform(rotate);
+    ON_BezierCurve obc2d(2, false, 4);
+    obc2d.SetCV(0, ON_3dPoint(0, 0, 0));
+    obc2d.SetCV(1, ON_3dPoint(new_vs) * length / 3.0);
+    obc2d.SetCV(2, ON_3dPoint(length, 0, 0) - (new_ve * length / 3.0));
+    obc2d.SetCV(3, ON_3dPoint(length, 0, 0));
+    EulerBezier2D::EulerBezierSpiralInterpolation(&obc2d);
+    this->Create(3,false,obc2d.Order());
+    ON_3dPoint p;
+    for(int i=0;i<obc2d.CVCount();++i){
+        obc2d.GetCV(i,p);
+        this->SetCV(i,ON_3dPoint(p.x,p.y,0));
+    }
+    ON_Xform inv_rotate = rotate.Inverse();
+    this->Transform(inv_rotate);
+    
+}
+
+int sign(double x)
+{
+    if (x > 1e-6)
+    {
         return 1;
     }
-    if (x < -1e-6) {
+    if (x < -1e-6)
+    {
         return -1;
     }
     return 0;
@@ -26,7 +64,7 @@ void EulerBezier3D::Smoothing()
     ON_3dPoint p0, p1, p2;
     ON_3dVector t0, t1, b0, b1;
     b0 = CurvatureAt(0);
-    b1 = CurvatureAt(1); 
+    b1 = CurvatureAt(1);
     for (int it = 0; it < iteration_times; ++it)
     {
         Elevate();
@@ -202,7 +240,7 @@ void EulerBezier3D::Elevate()
     }
 }
 
-void EulerBezier3D::Rise_to_3D(ON_NurbsCurve* onc, ON_3dPoint pe, ON_3dVector ts, ON_3dVector te)
+void EulerBezier3D::Rise_to_3D(ON_NurbsCurve *onc, ON_3dPoint pe, ON_3dVector ts, ON_3dVector te)
 {
     ts.Unitize();
     te.Unitize();
@@ -220,7 +258,8 @@ void EulerBezier3D::Rise_to_3D(ON_NurbsCurve* onc, ON_3dPoint pe, ON_3dVector ts
     onc->GetCV(0, p0);
     onc->GetCV(1, p1);
     double h1 = tan(theta0) * p0.DistanceTo(p1);
-    if (ON_3dVector::DotProduct(L, ts) < 0) {
+    if (ON_3dVector::DotProduct(L, ts) < 0)
+    {
         h1 = -h1;
     }
     double hn = pe.DistanceTo(ON_3dPoint(0, 0, 0));
@@ -233,7 +272,8 @@ void EulerBezier3D::Rise_to_3D(ON_NurbsCurve* onc, ON_3dPoint pe, ON_3dVector ts
     onc->GetCV(n - 1, p0);
     onc->GetCV(n, p1);
     double hn_1 = tan(theta1) * p0.DistanceTo(p1);
-    if (ON_3dVector::DotProduct(L, te) > 0) {
+    if (ON_3dVector::DotProduct(L, te) > 0)
+    {
         hn_1 = -hn_1;
     }
     hn_1 += hn;
@@ -244,14 +284,17 @@ void EulerBezier3D::Rise_to_3D(ON_NurbsCurve* onc, ON_3dPoint pe, ON_3dVector ts
     A(1, 0) = (1.0 - 1.0 / n) * (1.0 - 1.0 / n) * (1.0 - 1.0 / n);
     A(1, 1) = (1.0 - 1.0 / n) * (1.0 - 1.0 / n);
     A(1, 2) = (1.0 - 1.0 / n);
-    A(2, 0) = 1; A(2, 1) = 1; A(2, 2) = 1;
+    A(2, 0) = 1;
+    A(2, 1) = 1;
+    A(2, 2) = 1;
     Eigen::Matrix<double, 3, 1> B;
     B(0, 0) = h1;
     B(1, 0) = hn_1;
     B(2, 0) = hn;
     Eigen::Matrix<double, 3, 1> X;
     X = A.partialPivLu().solve(B);
-    for (int i = 0; i <= n; ++i) {
+    for (int i = 0; i <= n; ++i)
+    {
         double k = double(i) / double(n);
         onc->GetCV(i, p0);
         p0 = ON_3dPoint(p0.x, p0.y, X(0, 0) * k * k * k + X(1, 0) * k * k + k * X(2, 0));
@@ -287,51 +330,53 @@ void EulerBezier3D::EulerBezier3DTest(ONX_Model *model)
     delete obc;
     */
 
-    ON_BezierCurve* obc = new ON_BezierCurve(2, false, 4);
+    ON_BezierCurve *obc = new ON_BezierCurve(2, false, 4);
     obc->SetCV(0, ON_3dPoint(0, 0, 0));
     obc->SetCV(1, ON_3dPoint(5, 0, 0));
     obc->SetCV(2, ON_3dPoint(25.0 / 4.0, 5.0 / 4.0 * sqrt(3.0), 0));
     obc->SetCV(3, ON_3dPoint(2.5, 2.5 * sqrt(3), 0));
     EulerBezier2D::EulerBezierSpiralInterpolation(obc);
     const int layer_index1 = model->AddLayer(L"2D_curve", ON_Color::Black);
-    //const int layer_index2 = model->AddLayer(L"3D_curve", ON_Color::SaturatedMagenta);
-    ON_NurbsCurve* onc1 = new ON_NurbsCurve();
-    ON_NurbsCurve* onc2 = new ON_NurbsCurve();
+    // const int layer_index2 = model->AddLayer(L"3D_curve", ON_Color::SaturatedMagenta);
+    ON_NurbsCurve *onc1 = new ON_NurbsCurve();
+    ON_NurbsCurve *onc2 = new ON_NurbsCurve();
     obc->GetNurbForm(*onc1);
-    
-    ON_BezierCurve* sys_obc = new ON_BezierCurve();
+
+    ON_BezierCurve *sys_obc = new ON_BezierCurve();
     EulerBezier2D::GenerateSymmetry(sys_obc, obc, ON_3dPoint(0, 0, 0), ON_3dVector(0.5, 0.5 * sqrt(3), 0));
     sys_obc->GetNurbForm(*onc2);
     onc2->Reverse();
-    //ON_3dmObjectAttributes* attributes2 = new ON_3dmObjectAttributes();
-    //attributes2->m_layer_index = layer_index;
-    //attributes2->m_name = L"part2";
-    //model->AddManagedModelGeometryComponent(onc2, attributes2);
+    // ON_3dmObjectAttributes* attributes2 = new ON_3dmObjectAttributes();
+    // attributes2->m_layer_index = layer_index;
+    // attributes2->m_name = L"part2";
+    // model->AddManagedModelGeometryComponent(onc2, attributes2);
     onc1->Append(*onc2);
-    PrintCurvature(*onc1,"2DCurvesCurvature.txt");
-    ON_3dmObjectAttributes* attributes1 = new ON_3dmObjectAttributes();
+    PrintCurvature(*onc1, "2DCurvesCurvature.txt");
+    ON_3dmObjectAttributes *attributes1 = new ON_3dmObjectAttributes();
     attributes1->m_layer_index = layer_index1;
     attributes1->m_name = L"part1";
     model->AddManagedModelGeometryComponent(onc1, attributes1);
     delete obc;
     delete sys_obc;
     delete onc2;
-    //Rise
+    // Rise
 
-    ON_NurbsCurve* onc3 = new ON_NurbsCurve();
+    ON_NurbsCurve *onc3 = new ON_NurbsCurve();
     onc3->Create(3, false, onc1->Order(), onc1->CVCount());
     ON_3dPoint P;
-    for (int i = 0; i < onc1->CVCount(); ++i) {
+    for (int i = 0; i < onc1->CVCount(); ++i)
+    {
         onc1->GetCV(i, P);
         onc3->SetCV(i, P);
     }
-    const double* k0 = onc1->Knot();
-    for (int i = 0; i < onc1->KnotCount(); ++i) {
+    const double *k0 = onc1->Knot();
+    for (int i = 0; i < onc1->KnotCount(); ++i)
+    {
         onc3->SetKnot(i, *(k0 + i));
     }
     Rise_to_3D(onc3, ON_3dPoint(0, 0, 10), ON_3dVector(5, 0, -1), ON_3dVector(1, -sqrt(3), 1));
-    PrintCurvature(*onc3,"3DCurvesCurvature.txt");
-    ON_3dmObjectAttributes* attributes2 = new ON_3dmObjectAttributes();
+    PrintCurvature(*onc3, "3DCurvesCurvature.txt");
+    ON_3dmObjectAttributes *attributes2 = new ON_3dmObjectAttributes();
     attributes2->m_layer_index = layer_index1;
     attributes2->m_name = L"part2";
     model->AddManagedModelGeometryComponent(onc3, attributes2);
