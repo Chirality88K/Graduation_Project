@@ -15,13 +15,15 @@ EulerBezier3D::EulerBezier3D(ON_3dVector vs, ON_3dVector ve, double length)
 {
     vs.Unitize();
     ve.Unitize();
-    ON_3dVector normal(0, vs.z - ve.z, ve.y - vs.y);
+    ON_3dVector normal(0, -vs.z - ve.z, ve.y + vs.y);
     normal.Unitize();
     ON_3dVector new_vs = vs - ON_3dVector::DotProduct(vs, normal) * normal;
     ON_3dVector new_ve = ve - ON_3dVector::DotProduct(ve, normal) * normal;
     new_vs.Unitize();
     new_ve.Unitize();
-    ON_Plane realplane(ON_3dPoint(0, 0, 0), normal);
+    //ON_Plane realplane(ON_3dPoint(0, 0, 0), normal);
+    ON_3dVector real_yaxis = ON_3dVector::CrossProduct(normal, ON_3dVector(1, 0, 0));
+    ON_Plane realplane(ON_3dPoint(0, 0, 0), ON_3dVector(1, 0, 0), real_yaxis);
     ON_Plane xyplane(ON_3dPoint(0, 0, 0), ON_3dVector(0, 0, 1));
     ON_Xform rotate;
     rotate.Rotation(realplane, xyplane);
@@ -29,24 +31,44 @@ EulerBezier3D::EulerBezier3D(ON_3dVector vs, ON_3dVector ve, double length)
     ve.Transform(rotate);
     new_vs.Transform(rotate);
     new_ve.Transform(rotate);
+    double tan_phi0 = vs.z / sqrt(vs.x * vs.x + vs.y * vs.y);
+    double tan_phi1 = ve.z / sqrt(ve.x * ve.x + ve.y * ve.y);
     ON_BezierCurve obc2d(2, false, 4);
     obc2d.SetCV(0, ON_3dPoint(0, 0, 0));
     obc2d.SetCV(1, ON_3dPoint(new_vs) * length / 3.0);
     obc2d.SetCV(2, ON_3dPoint(length, 0, 0) - (new_ve * length / 3.0));
     obc2d.SetCV(3, ON_3dPoint(length, 0, 0));
     EulerBezier2D::EulerBezierSpiralInterpolation(&obc2d);
-    this->Create(3,false,obc2d.Order());
+    this->Create(3, false, obc2d.Order());
     ON_3dPoint p;
-    for(int i=0;i<obc2d.CVCount();++i){
-        obc2d.GetCV(i,p);
-        this->SetCV(i,ON_3dPoint(p.x,p.y,0));
+    for (int i = 0; i < obc2d.CVCount(); ++i)
+    {
+        obc2d.GetCV(i, p);
+        this->SetCV(i, ON_3dPoint(p.x, p.y, 0));
+    }
+    ON_3dPoint p0, p1;
+    GetCV(0, p0);
+    GetCV(1, p1);
+    double length_s = p0.DistanceTo(p1);
+    GetCV(CVCount() - 2, p0);
+    GetCV(CVCount() - 1, p1);
+    double length_e = p0.DistanceTo(p1);
+    double h1 = tan_phi0 * length_s;
+    double hn_1 = tan_phi1 * length_e;
+    double n = double(CVCount() - 1);
+    //double B = (h1 * n - h1 - hn_1) / (h1 - hn_1);
+    //double A = h1 / (1 - n) / (1 - B);
+    double A = h1 / (1 - n);
+    for (int i = 0; i < CVCount(); ++i)
+    {
+        GetCV(i, p);
+        SetCV(i, ON_3dPoint(p.x, p.y, A * i * (i - n)));
     }
     ON_Xform inv_rotate = rotate.Inverse();
     this->Transform(inv_rotate);
-    
 }
 
-int sign(double x)
+static int sign(double x)
 {
     if (x > 1e-6)
     {
@@ -351,7 +373,7 @@ void EulerBezier3D::EulerBezier3DTest(ONX_Model *model)
     // attributes2->m_name = L"part2";
     // model->AddManagedModelGeometryComponent(onc2, attributes2);
     onc1->Append(*onc2);
-    PrintCurvature(*onc1, "2DCurvesCurvature.txt");
+    PrintCurvature(*onc1, "2DCurvesCurvature");
     ON_3dmObjectAttributes *attributes1 = new ON_3dmObjectAttributes();
     attributes1->m_layer_index = layer_index1;
     attributes1->m_name = L"part1";
@@ -375,9 +397,25 @@ void EulerBezier3D::EulerBezier3DTest(ONX_Model *model)
         onc3->SetKnot(i, *(k0 + i));
     }
     Rise_to_3D(onc3, ON_3dPoint(0, 0, 10), ON_3dVector(5, 0, -1), ON_3dVector(1, -sqrt(3), 1));
-    PrintCurvature(*onc3, "3DCurvesCurvature.txt");
+    PrintCurvature(*onc3, "3DCurvesCurvature");
     ON_3dmObjectAttributes *attributes2 = new ON_3dmObjectAttributes();
     attributes2->m_layer_index = layer_index1;
     attributes2->m_name = L"part2";
     model->AddManagedModelGeometryComponent(onc3, attributes2);
+}
+
+void EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(ONX_Model *model)
+{
+    ON_3dVector VS(3, -1, 0);
+    ON_3dVector VE(1, 1, 1);
+    EulerBezier3D testebc(VS, VE, 10.0);
+    ON_NurbsCurve *noc = new ON_NurbsCurve();
+    testebc.GetNurbForm(*noc);
+    const int layer_index = model->AddLayer(L"3D_EulerBezier_Test", ON_Color::SaturatedMagenta);
+    ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
+    attributes->m_layer_index = layer_index;
+    attributes->m_name = L"curve";
+    model->AddManagedModelGeometryComponent(noc, attributes);
+    PrintCurvature(*noc, "EulerBezier3DTest_MidPlaneMethod_curvature");
+    PrintPosAndTan(*noc,"Pos&Tan");
 }

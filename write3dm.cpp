@@ -6,8 +6,8 @@
 void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 {
 	ON_TextLog error_log;
-	wchar_t *const wc = new wchar_t[filename.size()];
-	swprintf(wc, filename.size(), L"%S", filename.c_str());
+	wchar_t *const wc = new wchar_t[filename.size() + 1];
+	swprintf(wc, filename.size() + 1, L"%S", filename.c_str());
 	bool success = model->Write(wc, 0, &error_log);
 	if (success)
 	{
@@ -19,14 +19,14 @@ void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 		std::cout << "Fail to wrtie ";
 		std::cout << (filename) << "\n";
 	}
-	delete[]wc;
+	delete[] wc;
 }
 
 std::string ChiralityPrintNowTime()
 {
 	time_t seconds;
 	time(&seconds);
-	struct tm* p_tm = new tm();
+	struct tm *p_tm = new tm();
 	localtime_s(p_tm, &seconds);
 	std::string time_string;
 	time_string += std::to_string(1900 + p_tm->tm_year);
@@ -130,7 +130,7 @@ bool Internal_WriteExampleModel(const ONX_Model &model, const wchar_t *filename,
 	return model.Write(filename, version, &error_log);
 }
 
-void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename)
+void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_without_extension)
 {
 	double k0 = 0;
 	double kn = 1;
@@ -141,6 +141,7 @@ void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename)
 	ON_3dVector v2;
 	ON_3dVector v3;
 	ON_3dPoint dump;
+	std::string filename = filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	if (onc.Dimension() == 2)
 	{
 		std::ofstream ofs(filename);
@@ -185,7 +186,7 @@ void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename)
 	std::cout << "Fail to write curvatures: " + filename << std::endl;
 }
 
-void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename)
+void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
 {
 	double k0 = 0;
 	double kn = 1;
@@ -197,6 +198,7 @@ void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename)
 	ON_3dVector v2;
 	ON_3dVector v3;
 	ON_3dPoint dump;
+	std::string filename = filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	if (onc.Dimension() == 2)
 	{
 		std::ofstream ofs(filename);
@@ -239,4 +241,28 @@ void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename)
 		return;
 	}
 	std::cout << "Fail to write curvatures: " + filename << std::endl;
+}
+
+void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
+{
+	std::string filename = filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::ofstream ofs(filename);
+	double k0 = 0;
+	double kn = 1;
+	onc.GetDomain(&k0, &kn);
+	double t = 0;
+	ON_3dPoint p;
+	ON_3dVector v;
+	for (int i = 0; i <= 1000; i++)
+	{
+		t = (kn - k0) / 1000 * i + k0;
+		p = onc.PointAt(t);
+		v = onc.TangentAt(t);
+		ofs << std::fixed << std::setprecision(6) << t << "\t";
+		ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
+		ofs << "(" << v.x << "," << v.y << "," << v.z << ")";
+		ofs << std::endl;
+	}
+	ofs.close();
+	std::cout << filename + " nurbs curve position and tangent written!" << std::endl;
 }

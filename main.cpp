@@ -83,11 +83,12 @@ int main()
     pc3d->Add_to_Model(model, L"test_piece_clothoid", ON_Color::SaturatedGreen);
     */
 
-    Cornu_Spiral::Cornu_test(&model);
+    //Cornu_Spiral::Cornu_test(&model);
     // EulerBspline2D::EulerBsplineTest(&model);
     //  EulerBezier2D::EulerBezier2dTest(&model);
     // EulerBezier2D::YangMethodtest(&model);
     // EulerBezier3D::EulerBezier3DTest(&model);
+    EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
 
     ChiralityWrite3dmModel(&model, filename);
     return 0;
