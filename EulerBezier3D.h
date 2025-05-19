@@ -6,8 +6,9 @@
 class EulerBezier3D : public ON_BezierCurve
 {
 public:
-	EulerBezier3D();
-	EulerBezier3D(ON_3dVector vs, ON_3dVector ve, double length);
+	EulerBezier3D();															 // default 啥也不干
+	EulerBezier3D(ON_3dVector vs, ON_3dVector ve, double length);				 // 起点是原点，终点是(length,0,0)，起始切向vs，终点切向是ve
+	EulerBezier3D(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve); // 起点是ps，终点是pe，起始切向vs，终点切向是ve
 	void Smoothing();
 	static void EulerBezier3DTest(ONX_Model *model);
 	static void EulerBezier3DTest_MidPlaneMethod(ONX_Model *model);
