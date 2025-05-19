@@ -1,7 +1,5 @@
 #include "FilletSurface.h"
-#include "example_ud.h"
 #include "thirdparty/eigen/Eigen/Dense"
-
 
 FilletSurface::~FilletSurface()
 {
@@ -9,7 +7,7 @@ FilletSurface::~FilletSurface()
 	delete Rail1VF;
 }
 
-void FilletSurface::SetSurface(int i, const ON_NurbsSurface& nurbs)
+void FilletSurface::SetSurface(int i, const ON_NurbsSurface &nurbs)
 {
 	if (i == 0)
 	{
@@ -71,7 +69,7 @@ void FilletSurface::ReverseVector(int i)
 	Rail1VF->ReverseVector();
 }
 
-void FilletSurface::ComputeFillCurve(int num_knot, double* knot_on_rail0, double* knot_on_rail1)
+void FilletSurface::ComputeFillCurve(int num_knot, double *knot_on_rail0, double *knot_on_rail1)
 {
 	FillCurveArray.clear();
 	Knot_on_Rail0.clear();
@@ -160,8 +158,6 @@ ON_3dPoint FilletSurface::Point_at(int sur_index, double u, double v)
 		Pu1v = Pu10;
 		Pu1v.Transform(Rotate);
 	}
-	
-	
 
 	ON_3dPoint IuP = P0v * phi0u + Pu0v * phid0u + P1v * phi1u + Pu1v * phid1u;
 	ON_3dPoint IvP = Pu0 * phi0v + Pvu0 * phid0v + Pu1 * phi1v + Pvu1 * phid1v;
@@ -185,27 +181,30 @@ ON_3dPoint FilletSurface::Point_at(int sur_index, double u, double v)
 	double beta = 1 - alpha;
 	if (u * (1 - u) == 0 && v * (1 - v) != 0)
 	{
-		alpha = 1; beta = 0;
+		alpha = 1;
+		beta = 0;
 	}
 	if (u * (1 - u) != 0 && v * (1 - v) == 0)
 	{
-		alpha = 0; beta = 1;
+		alpha = 0;
+		beta = 1;
 	}
 	if (u * (1 - u) == 0 && v * (1 - v) == 0)
 	{
-		alpha = 0.5; beta = 0.5;
+		alpha = 0.5;
+		beta = 0.5;
 	}
 	return alpha * IuP + beta * IvP;
 }
 
-void FilletSurface::Add_FilletSurface(ONX_Model* model, const wchar_t* name, int FillCurveSample_num, int EveryPatchSample_num, ON_Color color)
+void FilletSurface::Add_FilletSurface(ONX_Model *model, const wchar_t *name, int FillCurveSample_num, int EveryPatchSample_num, ON_Color color)
 {
 	model->AddLayer(L"FilletSurface_mesh", color);
 	bool bHasVertexNormals = false;
 	bool bHasTexCoords = false;
 	const int vertex_count = FillCurveSample_num * EveryPatchSample_num * (FillCurveArray.size() - 1);
 	const int face_count = (FillCurveSample_num - 1) * (EveryPatchSample_num - 1) * (FillCurveArray.size() - 1);
-	ON_Mesh** mesh = new ON_Mesh * ();
+	ON_Mesh **mesh = new ON_Mesh *();
 	*mesh = new ON_Mesh(face_count, vertex_count, bHasVertexNormals, bHasTexCoords);
 	for (int i = 0; i < vertex_count; i++)
 	{
@@ -217,9 +216,8 @@ void FilletSurface::Add_FilletSurface(ONX_Model* model, const wchar_t* name, int
 		{
 			for (int k = 0; k < FillCurveSample_num; k++)
 			{
-				(*mesh)->SetVertex
-				(i * EveryPatchSample_num * FillCurveSample_num + k * EveryPatchSample_num + j,
-					Point_at(i, j / (EveryPatchSample_num - 1.0), k / (FillCurveSample_num - 1.0)));
+				(*mesh)->SetVertex(i * EveryPatchSample_num * FillCurveSample_num + k * EveryPatchSample_num + j,
+								   Point_at(i, j / (EveryPatchSample_num - 1.0), k / (FillCurveSample_num - 1.0)));
 			}
 		}
 	}
@@ -231,10 +229,10 @@ void FilletSurface::Add_FilletSurface(ONX_Model* model, const wchar_t* name, int
 			for (int k = 0; k < FillCurveSample_num - 1; k++)
 			{
 				(*mesh)->SetQuad(index,
-					i * EveryPatchSample_num * FillCurveSample_num + k * EveryPatchSample_num + j,
-					i * EveryPatchSample_num * FillCurveSample_num + k * EveryPatchSample_num + j + 1,
-					i * EveryPatchSample_num * FillCurveSample_num + (k + 1) * EveryPatchSample_num + j + 1,
-					i * EveryPatchSample_num * FillCurveSample_num + (k + 1) * EveryPatchSample_num + j);
+								 i * EveryPatchSample_num * FillCurveSample_num + k * EveryPatchSample_num + j,
+								 i * EveryPatchSample_num * FillCurveSample_num + k * EveryPatchSample_num + j + 1,
+								 i * EveryPatchSample_num * FillCurveSample_num + (k + 1) * EveryPatchSample_num + j + 1,
+								 i * EveryPatchSample_num * FillCurveSample_num + (k + 1) * EveryPatchSample_num + j);
 				index++;
 			}
 		}
@@ -244,22 +242,22 @@ void FilletSurface::Add_FilletSurface(ONX_Model* model, const wchar_t* name, int
 		(*mesh)->ComputeVertexNormals();
 	}
 	const int layer_index = model->AddLayer(name, color);
-	ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 	attributes->m_layer_index = layer_index;
 	attributes->m_name = name;
 	model->AddManagedModelGeometryComponent(*mesh, attributes);
 	delete mesh;
 }
 
-void FilletSurface::Add_FillCurves(ONX_Model* model, const wchar_t* name, ON_Color color)
+void FilletSurface::Add_FillCurves(ONX_Model *model, const wchar_t *name, ON_Color color)
 {
 	const int layer_index = model->AddLayer(name, color);
-	ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 	attributes->m_layer_index = layer_index;
 	attributes->m_name = name;
 	for (unsigned int i = 0; i < FillCurveArray.size(); i++)
 	{
-		ON_NurbsCurve** onc = new ON_NurbsCurve * ();
+		ON_NurbsCurve **onc = new ON_NurbsCurve *();
 		(*onc) = new ON_NurbsCurve();
 		FillCurveArray[i].GetNurbForm(**onc);
 		model->AddManagedModelGeometryComponent(*onc, attributes);
@@ -267,7 +265,7 @@ void FilletSurface::Add_FillCurves(ONX_Model* model, const wchar_t* name, ON_Col
 	}
 }
 
-VectorField1d::VectorField1d(ON_NurbsSurface* osf, bool whichone, double s)
+VectorField1d::VectorField1d(ON_NurbsSurface *osf, bool whichone, double s)
 {
 	m_source_surface = new ON_NurbsSurface(*osf);
 	m_source_surface->SetDomain(0, 0, 1);
@@ -293,7 +291,7 @@ void VectorField1d::ReverseVector()
 	is_vector_reverse = !is_vector_reverse;
 }
 
-void VectorField1d::GetAll(double t, ON_3dPoint& p, ON_3dVector& n, ON_3dVector& v)
+void VectorField1d::GetAll(double t, ON_3dPoint &p, ON_3dVector &n, ON_3dVector &v)
 {
 	int n_ceo = 1;
 	int v_ceo = 1;
@@ -356,7 +354,7 @@ ON_3dVector VectorField1d::MixedDer(double t)
 	return result * v_ceo * n_ceo;
 }
 
-void FilletSurface::SetRailUniformKnot(int num_knot, double* knot_on_rail0, double* knot_on_rail1)
+void FilletSurface::SetRailUniformKnot(int num_knot, double *knot_on_rail0, double *knot_on_rail1)
 {
 	if (num_knot < 3)
 	{
@@ -373,7 +371,7 @@ void FilletSurface::SetRailUniformKnot(int num_knot, double* knot_on_rail0, doub
 	}
 }
 
-void ThreeDegreeBsplineInterplate_Period(ON_NurbsCurve& onc, std::vector <ON_3dPoint> Q, double* knot)
+void ThreeDegreeBsplineInterplate_Period(ON_NurbsCurve &onc, std::vector<ON_3dPoint> Q, double *knot)
 {
 	int K = Q.size() - 1;
 	int L = K + 2;
@@ -429,20 +427,20 @@ void ThreeDegreeBsplineInterplate_Period(ON_NurbsCurve& onc, std::vector <ON_3dP
 		onc.SetKnot(i, solve_N.Knot(i));
 	}
 	onc.SetCV(0, Q[0]);
-	for (int i = 1; i < L ; i++)
+	for (int i = 1; i < L; i++)
 	{
 		onc.SetCV(i, ON_3dPoint(P(i - 1, 0), P(i - 1, 1), P(i - 1, 2)));
 	}
 	onc.SetCV(L, Q[K]);
 }
 
-void FilletSurface::Skinning(ON_NurbsSurface& ons, int num_fill_curve, double* u_knot)
+void FilletSurface::Skinning(ON_NurbsSurface &ons, int num_fill_curve, double *u_knot)
 {
 	int K = num_fill_curve - 1;
 	int m = K + 2;
 	int p = 4;
-	std::vector <ON_NurbsCurve> fill_nurbs_curve;
-	std::vector < ON_NurbsCurve> InterpolateCurve;
+	std::vector<ON_NurbsCurve> fill_nurbs_curve;
+	std::vector<ON_NurbsCurve> InterpolateCurve;
 	for (auto it : FillCurveArray)
 	{
 		ON_NurbsCurve onc;
@@ -453,7 +451,7 @@ void FilletSurface::Skinning(ON_NurbsSurface& ons, int num_fill_curve, double* u
 	int q = fill_nurbs_curve[0].Order();
 	for (int i = 0; i <= n; i++)
 	{
-		std::vector <ON_3dPoint> InterpolatePoints;
+		std::vector<ON_3dPoint> InterpolatePoints;
 		for (auto iter : fill_nurbs_curve)
 		{
 			ON_3dPoint p;
@@ -464,7 +462,7 @@ void FilletSurface::Skinning(ON_NurbsSurface& ons, int num_fill_curve, double* u
 		ThreeDegreeBsplineInterplate_Period(onc, InterpolatePoints, u_knot);
 		InterpolateCurve.push_back(onc);
 	}
-	
+
 	ons.Create(3, false, p, q, m + 1, n + 1);
 	for (int i = 0; i < p + m - 1; i++)
 	{
