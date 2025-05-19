@@ -11,6 +11,7 @@
 #include "EulerBezier2D.h"
 #include "EulerBspline2D.h"
 #include "EulerBezier3D.h"
+#include "EulerBspline3D.h"
 #include "write3dm.h"
 const double PI = acos(-1.0);
 
@@ -25,7 +26,7 @@ void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string fi
 // int main ( int argc, const char* argv[] )
 int main()
 {
-    const std::string filename = "Cornu_spiral_Test-" + ChiralityPrintNowTime() + ".3dm";
+    const std::string filename = "EulerBspline3D_Test-" + ChiralityPrintNowTime() + ".3dm";
     ON::Begin();
     ONX_Model model;
     Internal_SetExampleModelProperties(model, OPENNURBS__FUNCTION__, __FILE__);
@@ -83,12 +84,13 @@ int main()
     pc3d->Add_to_Model(model, L"test_piece_clothoid", ON_Color::SaturatedGreen);
     */
 
-    //Cornu_Spiral::Cornu_test(&model);
-    // EulerBspline2D::EulerBsplineTest(&model);
-    //  EulerBezier2D::EulerBezier2dTest(&model);
-    // EulerBezier2D::YangMethodtest(&model);
-    // EulerBezier3D::EulerBezier3DTest(&model);
-    EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
+    // Cornu_Spiral::Cornu_test(&model);
+    //  EulerBspline2D::EulerBsplineTest(&model);
+    //   EulerBezier2D::EulerBezier2dTest(&model);
+    //  EulerBezier2D::YangMethodtest(&model);
+    //  EulerBezier3D::EulerBezier3DTest(&model);
+    // EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
+    EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
 
     ChiralityWrite3dmModel(&model, filename);
     return 0;
