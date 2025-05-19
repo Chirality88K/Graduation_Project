@@ -106,6 +106,6 @@ void EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(ONX_Model *model)
     attributes->m_layer_index = layer_index;
     attributes->m_name = L"curve";
     model->AddManagedModelGeometryComponent(noc, attributes);
-    PrintCurvature(*noc, "EulerBezier3DTest_MidPlaneMethod_curvature");
+    PrintCurvature(*noc, "EulerBspline3DTest_MidPlaneMethod_curvature");
     PrintPosAndTan(*noc, "Pos&Tan");
 }
