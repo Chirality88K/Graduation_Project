@@ -22,4 +22,5 @@ bool Internal_WriteExampleModel(
 void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_without_extension = "BezierCurveCurvature");
 void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "NurbsCurveCurvature");
 void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Pos&Tan");
+void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Bspline Debug");
 #endif

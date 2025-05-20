@@ -23,6 +23,17 @@ double ChiralityMath::ArcLength(const ON_NurbsCurve &onc, double from, double to
 	return sum * (to - from) / double(N);
 }
 
+double ChiralityMath::ArcLength(const ON_BezierCurve &obc)
+{
+	return ArcLength(obc, 0, 1);
+}
+double ChiralityMath::ArcLength(const ON_NurbsCurve &onc)
+{
+	double t0, t1;
+	onc.GetDomain(&t0, &t1);
+	return ArcLength(onc, t0, t1);
+}
+
 double ChiralityMath::Bernstein(int n, int i, double t)
 {
 	if (n < 1 || i < 0 || i > n)
@@ -117,4 +128,35 @@ ON_NurbsCurve ChiralityMath::UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector
 		onc.SetCV(i, ON_3dPoint(P(i, 0), P(i, 1), P(i, 2)));
 	}
 	return onc;
+}
+
+void ChiralityMath::Elevate(ON_NurbsCurve &onc)
+{
+	int v_num = onc.CVCount();
+			ON_3dPoint p1, p2;
+			std::vector<ON_3dPoint> vp;
+			onc.GetCV(0, p1);
+			vp.push_back(p1);
+			for (int i = 1; i < v_num; i++)
+			{
+				onc.GetCV(i - 1, p1);
+				onc.GetCV(i, p2);
+				vp.push_back(p1 * (double(i) / double(v_num)) + p2 * (1 - double(i) / double(v_num)));
+			}
+			onc.GetCV(v_num - 1, p1);
+			vp.push_back(p1);
+			double u0, u1;
+			onc.GetDomain(&u0, &u1);
+			onc.EvPoint(u0, p1);
+			onc.EvPoint(u1, p2);
+			ON_3dVector v1 = onc.TangentAt(u0);
+			ON_3dVector v2 = onc.TangentAt(u1);
+			onc.Create(3, false, onc.Order(), v_num + 1);
+
+			int i = 0;
+			for (const auto &it : vp)
+			{
+				onc.SetCV(i, it);
+				i++;
+			}
 }

@@ -2,6 +2,7 @@
 #include "EulerBspline2D.h"
 #include "write3dm.h"
 #include "ChiralityMathTools.h"
+#include "thirdparty/eigen/Eigen/Dense"
 
 EulerBspline3D::EulerBspline3D()
 {
@@ -51,12 +52,43 @@ EulerBspline3D::EulerBspline3D(ON_3dVector vs, ON_3dVector ve, double length)
 	double h1 = tan_phi0 * length_s;
 	double hn_1 = tan_phi1 * length_e;
 	double n = double(CVCount() - 1);
+
+	Eigen::Matrix<double, 4, 4> MatrixA;
+	MatrixA(0, 0) = 12.0;
+	MatrixA(0, 1) = 8.0;
+	MatrixA(0, 2) = 6.0;
+	MatrixA(0, 3) = 6.0;
+	MatrixA(1, 0) = pow(n, 3) + 4 * pow(n - 1, 3) + pow(n - 2, 3);
+	MatrixA(1, 1) = pow(n, 2) + 4 * pow(n - 1, 2) + pow(n - 2, 2);
+	MatrixA(1, 2) = 6 * n - 6.0;
+	MatrixA(1, 3) = 6.0;
+	MatrixA(2, 0) = 4.0;
+	MatrixA(2, 1) = 2.0;
+	MatrixA(2, 2) = 1.0;
+	MatrixA(2, 3) = 0.0;
+	MatrixA(3, 0) = 3 * n * n - 6 * n + 4.0;
+	MatrixA(3, 1) = 2 * n - 2.0;
+	MatrixA(3, 2) = 1.0;
+	MatrixA(3, 3) = 0.0;
+	Eigen::Matrix<double, 4, 1> MatrixB;
+	MatrixB(0, 0) = 0.0;
+	MatrixB(1, 0) = 0.0;
+	MatrixB(2, 0) = h1;
+	MatrixB(3, 0) = hn_1;
+	Eigen::Matrix<double, 4, 1> FX = MatrixA.partialPivLu().solve(MatrixB);
+	/*
 	double A = h1 / (2.0 - n);
 	double B = -1.0 / 6.0 * A * (1.5 * n * n - 6.0 * n + 8.0);
 	for (int i = 0; i < CVCount(); ++i)
 	{
 		GetCV(i, p);
 		SetCV(i, ON_3dPoint(p.x, p.y, A * (i - n / 2.0) * (i - n / 2.0) + B));
+	}
+	*/
+	for (int i = 0; i < CVCount(); ++i)
+	{
+		GetCV(i, p);
+		SetCV(i, ON_3dPoint(p.x, p.y, FX(0, 0) * i * i * i + FX(1, 0) * i * i + FX(2, 0) * i + FX(3, 0)));
 	}
 	ON_Xform inv_rotation = rotation.Inverse();
 	this->Transform(inv_rotation);
@@ -87,13 +119,23 @@ void EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(ONX_Model *model)
 	ON_3dVector VE(1, 1, 1);
 	ON_3dPoint PS(0, 1, 0);
 	ON_3dPoint PE(10, -2, 4);
-	EulerBspline3D testebc(PS, PE, VS, VE);
-	ON_NurbsCurve *noc = new ON_NurbsCurve(testebc);
-	const int layer_index = model->AddLayer(L"3D_EulerBspline3D_Test", ON_Color::SaturatedMagenta);
-	ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
-	attributes->m_layer_index = layer_index;
-	attributes->m_name = L"curve";
-	model->AddManagedModelGeometryComponent(noc, attributes);
-	PrintCurvature(*noc, "EulerBspline3DTest_MidPlaneMethod_curvature");
-	PrintPosAndTan(*noc, "Pos&Tan");
+	ON_Color color[7] = {ON_Color::SaturatedRed, ON_Color(255, 128, 0), ON_Color::SaturatedYellow,
+						 ON_Color::SaturatedGreen, ON_Color::SaturatedCyan, ON_Color::SaturatedBlue, ON_Color(76, 0, 153)};
+	std::string color_name[7] = {"Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"};
+	for (int i = 0; i < 7; ++i)
+	{
+		ON_Xform rotation;
+		rotation.Rotation(0.1 * i, ON_3dVector::ZAxis, ON_3dPoint::Origin);
+		ON_3dVector vvss = VS;
+		ON_3dVector vvee = VE;
+		vvss.Transform(rotation);
+		vvee.Transform(rotation);
+		ON_NurbsCurve *onc = new EulerBspline3D(PS, PE, vvss, vvee);
+		const int layer_index = model->AddLayer(L"3D_EulerBspline3D", color[i]);
+		ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
+		attributes->m_layer_index = layer_index;
+		attributes->m_name = L"curve";
+		model->AddManagedModelGeometryComponent(onc, attributes);
+		ChiralityDebugInfo(*onc, color_name[i]);
+	}
 }
