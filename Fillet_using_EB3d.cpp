@@ -89,4 +89,12 @@ void Fillet_EB3D::Fillet_EB3D_Test(ONX_Model *model)
 	test_fillet.SetRailCurve(rail[0], rail[1]);
 	test_fillet.SetVectorFeild(lambda1, lambda2);
 	test_fillet.GenerateBone();
+	const int layer_index1 = model->AddLayer(L"RailCurve", ON_Color::SaturatedMagenta);
+	ChiralityAddNurbsCurve(model, rail[0], L"rail curve_0", layer_index1);
+	ChiralityAddNurbsCurve(model, rail[1], L"rail_curve_1", layer_index1);
+	const int layer_index2 = model->AddLayer(L"BoneStructure", ON_Color::SaturatedBlue);
+	for (int i = 0; i < test_fillet.mBoneStructure.size(); ++i)
+	{
+		ChiralityAddNurbsCurve(model, *(test_fillet.mBoneStructure[i]), L"bone curve" + std::to_wstring(i), layer_index2);
+	}
 }

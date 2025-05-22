@@ -94,7 +94,7 @@ int main()
 	//  EulerBezier2D::YangMethodtest(&model);
 	//  EulerBezier3D::EulerBezier3DTest(&model);
 	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
-	EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
+	//EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
 	Fillet_EB3D::Fillet_EB3D_Test(&model);
 
 	ChiralityWrite3dmModel(&model, filename);

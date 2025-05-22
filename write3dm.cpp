@@ -27,11 +27,11 @@ std::string ChiralityPrintNowTime()
 	time_t seconds;
 	time(&seconds);
 	struct tm *p_tm = new tm();
-	#ifdef WIN32
+#ifdef WIN32
 	localtime_s(p_tm, &seconds);
-	#else
+#else
 	localtime_r(&seconds, p_tm);
-	#endif
+#endif
 
 	std::string time_string;
 	time_string += std::to_string(1900 + p_tm->tm_year);
@@ -344,4 +344,13 @@ void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_wi
 		return;
 	}
 	ofs.close();
+}
+
+void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const std::wstring &curve_name, int layer_index)
+{
+	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();
+	att->m_layer_index = layer_index;
+	att->m_name = curve_name.c_str();
+	ON_NurbsCurve *c = new ON_NurbsCurve(onc);
+	model->AddManagedModelGeometryComponent(c, att);
 }

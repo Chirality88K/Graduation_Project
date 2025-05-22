@@ -262,7 +262,6 @@ namespace EulerBspline2D
 		int v_num = onc.CVCount();
 		while (v_num < cv_count)
 		{
-			v_num = onc.CVCount();
 			ON_3dPoint p1, p2;
 			vector<ON_3dPoint> vp;
 			onc.GetCV(0, p1);
@@ -294,6 +293,7 @@ namespace EulerBspline2D
 			{
 				onc.SetKnot(i, i + 1);
 			}
+			v_num = onc.CVCount();
 		}
 	}
 
