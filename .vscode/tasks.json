@@ -22,7 +22,7 @@
         {
             "label": "Linux_Build",
             "type": "shell",
-            "command": "cd build;cmake ..;make;",
+            "command": "cd build;cmake -DCMAKE_BUILD_TYPE=Debug ..;make;",
             "group": {
                 "kind": "build",
                 "isDefault": true

@@ -257,6 +257,46 @@ namespace EulerBspline2D
 		}
 	}
 
+	void EulerBsplineInterpolation_to_fixed_CVCount(ON_NurbsCurve &onc, int cv_count)
+	{
+		int v_num = onc.CVCount();
+		while (v_num < cv_count)
+		{
+			v_num = onc.CVCount();
+			ON_3dPoint p1, p2;
+			vector<ON_3dPoint> vp;
+			onc.GetCV(0, p1);
+			vp.push_back(p1);
+			for (int i = 1; i < v_num; i++)
+			{
+				onc.GetCV(i - 1, p1);
+				onc.GetCV(i, p2);
+				vp.push_back(p1 * (double(i) / double(v_num)) + p2 * (1 - double(i) / double(v_num)));
+			}
+			onc.GetCV(v_num - 1, p1);
+			vp.push_back(p1);
+			double u0, u1;
+			onc.GetDomain(&u0, &u1);
+			onc.EvPoint(u0, p1);
+			onc.EvPoint(u1, p2);
+			ON_3dVector v1 = onc.TangentAt(u0);
+			ON_3dVector v2 = onc.TangentAt(u1);
+			onc.Create(2, false, onc.Order(), v_num + 1);
+
+			int i = 0;
+			for (const auto &it : vp)
+			{
+				onc.SetCV(i, it);
+				i++;
+			}
+			SmoothingBsplineControlPolygon(onc, p1, p2, v1, v2);
+			for (int i = 0; i < onc.KnotCount(); i++)
+			{
+				onc.SetKnot(i, i + 1);
+			}
+		}
+	}
+
 	void EulerBsplineTest(ONX_Model *model)
 	{
 		ON_NurbsCurve *onc = new ON_NurbsCurve();

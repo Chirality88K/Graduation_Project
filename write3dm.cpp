@@ -27,7 +27,12 @@ std::string ChiralityPrintNowTime()
 	time_t seconds;
 	time(&seconds);
 	struct tm *p_tm = new tm();
+	#ifdef WIN32
 	localtime_s(p_tm, &seconds);
+	#else
+	localtime_r(&seconds, p_tm);
+	#endif
+
 	std::string time_string;
 	time_string += std::to_string(1900 + p_tm->tm_year);
 	if (p_tm->tm_mon + 1 < 10)

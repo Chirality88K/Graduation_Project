@@ -8,7 +8,7 @@ EulerBspline3D::EulerBspline3D()
 {
 }
 
-EulerBspline3D::EulerBspline3D(ON_3dVector vs, ON_3dVector ve, double length)
+EulerBspline3D::EulerBspline3D(ON_3dVector vs, ON_3dVector ve, double length, int min_cv_count)
 {
 	vs.Unitize();
 	ve.Unitize();
@@ -31,6 +31,7 @@ EulerBspline3D::EulerBspline3D(ON_3dVector vs, ON_3dVector ve, double length)
 	double tan_phi1 = ve.z / sqrt(ve.x * ve.x + ve.y * ve.y);
 	ON_NurbsCurve onc2d = ChiralityMath::UniformG1(ON_3dPoint::Origin, ON_3dPoint(length, 0.0, 0.0), new_vs, new_ve);
 	EulerBspline2D::EulerBsplineSpiralInterpolation(onc2d);
+	EulerBspline2D::EulerBsplineInterpolation_to_fixed_CVCount(onc2d, min_cv_count);
 	this->Create(3, false, onc2d.Order(), onc2d.CVCount());
 	ON_3dPoint p;
 	for (int i = 0; i < onc2d.CVCount(); ++i)
@@ -76,15 +77,6 @@ EulerBspline3D::EulerBspline3D(ON_3dVector vs, ON_3dVector ve, double length)
 	MatrixB(2, 0) = h1;
 	MatrixB(3, 0) = hn_1;
 	Eigen::Matrix<double, 4, 1> FX = MatrixA.partialPivLu().solve(MatrixB);
-	/*
-	double A = h1 / (2.0 - n);
-	double B = -1.0 / 6.0 * A * (1.5 * n * n - 6.0 * n + 8.0);
-	for (int i = 0; i < CVCount(); ++i)
-	{
-		GetCV(i, p);
-		SetCV(i, ON_3dPoint(p.x, p.y, A * (i - n / 2.0) * (i - n / 2.0) + B));
-	}
-	*/
 	for (int i = 0; i < CVCount(); ++i)
 	{
 		GetCV(i, p);
@@ -94,7 +86,7 @@ EulerBspline3D::EulerBspline3D(ON_3dVector vs, ON_3dVector ve, double length)
 	this->Transform(inv_rotation);
 }
 
-EulerBspline3D::EulerBspline3D(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)
+EulerBspline3D::EulerBspline3D(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve, int min_cv_count)
 {
 	ON_3dPoint p_e_ = pe - ps;
 	ON_3dVector T = p_e_;
@@ -106,7 +98,7 @@ EulerBspline3D::EulerBspline3D(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_
 	ON_3dVector real_ve = ve;
 	real_vs.Transform(rotation);
 	real_ve.Transform(rotation);
-	EulerBspline3D eb3d = EulerBspline3D(real_vs, real_ve, PEX);
+	EulerBspline3D eb3d = EulerBspline3D(real_vs, real_ve, PEX, min_cv_count);
 	*this = eb3d;
 	ON_Xform inv_rotation = rotation.Inverse();
 	this->Transform(inv_rotation);

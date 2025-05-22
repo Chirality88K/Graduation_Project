@@ -16,6 +16,7 @@
 #include "EulerBezier3D.h"
 #include "EulerBspline3D.h"
 #include "write3dm.h"
+#include "Fillet_using_EB3d.h"
 const double PI = acos(-1.0);
 
 using namespace std;
@@ -94,6 +95,7 @@ int main()
 	//  EulerBezier3D::EulerBezier3DTest(&model);
 	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
 	EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
+	Fillet_EB3D::Fillet_EB3D_Test(&model);
 
 	ChiralityWrite3dmModel(&model, filename);
 	return 0;
