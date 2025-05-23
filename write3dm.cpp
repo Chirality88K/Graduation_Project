@@ -1,4 +1,5 @@
 #include "write3dm.h"
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <time.h>
@@ -7,7 +8,7 @@ void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 {
 	ON_TextLog error_log;
 	wchar_t *const wc = new wchar_t[filename.size() + 1];
-	swprintf(wc, filename.size() + 1, L"%S", filename.c_str());
+	std::mbstowcs(wc,filename.c_str(),filename.size() +1);
 	bool success = model->Write(wc, 0, &error_log);
 	if (success)
 	{

@@ -27,6 +27,15 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "linux_build_clear",
+            "type": "shell",
+            "command": "cd build;g++ -std=c++17 ../tools/Deletefiles.cpp -o Clear",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }
