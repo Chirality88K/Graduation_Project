@@ -45,6 +45,16 @@
             "cwd": "${workspaceFolder}/build",
             "environment": [],
             "preLaunchTask": "linux_build_clear"
+        },
+        {
+            "name": "Windows_Clear_Workspace",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/Clear.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "preLaunchTask": "windows_build_clear"
         }
     ]
 }

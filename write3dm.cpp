@@ -8,7 +8,7 @@ void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 {
 	ON_TextLog error_log;
 	wchar_t *const wc = new wchar_t[filename.size() + 1];
-	std::mbstowcs(wc,filename.c_str(),filename.size() +1);
+	std::mbstowcs(wc, filename.c_str(), filename.size() + 1);
 	bool success = model->Write(wc, 0, &error_log);
 	if (success)
 	{
@@ -353,5 +353,14 @@ void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const st
 	att->m_layer_index = layer_index;
 	att->m_name = curve_name.c_str();
 	ON_NurbsCurve *c = new ON_NurbsCurve(onc);
+	model->AddManagedModelGeometryComponent(c, att);
+}
+
+void ChiralityAddNurbsSurface(ONX_Model *model, const ON_NurbsSurface &ons, const std::wstring &surface_name, int layer_index)
+{
+	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();
+	att->m_layer_index = layer_index;
+	att->m_name = surface_name.c_str();
+	ON_NurbsSurface *c = new ON_NurbsSurface(ons);
 	model->AddManagedModelGeometryComponent(c, att);
 }
