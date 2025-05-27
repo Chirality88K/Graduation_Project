@@ -13,6 +13,7 @@ public:
 	void GenerateBone();
 	void GenerateFillet();
 	static void Fillet_EB3D_Test(ONX_Model *model);
+	static void TwoSurfaces_Fillet_Test(ONX_Model *model);
 
 private:
 	ON_NurbsCurve mRailCurve[2];

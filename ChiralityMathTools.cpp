@@ -259,3 +259,52 @@ ON_NurbsSurface ChiralityMath::Skinning(const std::vector<ON_NurbsCurve> &curve_
 	}
 	return ons;
 }
+
+ON_NurbsSurface ChiralityMath::GenerateCylinder(const ON_NurbsCurve &parent_curve, ON_3dVector dir, double t0, double t1)
+{
+	dir.Unitize();
+	ON_NurbsSurface ons;
+	ons.Create(3, parent_curve.IsRational(), parent_curve.Order(), 2, parent_curve.CVCount(), 2);
+	ON_3dPoint p;
+	for (int i = 0; i < parent_curve.CVCount(); ++i)
+	{
+		parent_curve.GetCV(i, p);
+		ons.SetCV(i, 0, p + dir * t0);
+		ons.SetCV(i, 1, p + dir * t1);
+		if (parent_curve.IsRational())
+		{
+			ons.SetWeight(i, 0, parent_curve.Weight(i));
+			ons.SetWeight(i, 1, parent_curve.Weight(i));
+		}
+	}
+	for (int i = 0; i < parent_curve.KnotCount(); ++i)
+	{
+		ons.SetKnot(0, i, parent_curve.Knot(i));
+	}
+	ons.SetKnot(1, 0, 0);
+	ons.SetKnot(1, 1, 1);
+	return ons;
+}
+
+ON_NurbsCurve ChiralityMath::ChangeDimensionFrom2To3(const ON_NurbsCurve &onc_2d)
+{
+	ON_NurbsCurve onc_3d(3, onc_2d.IsRational(), onc_2d.Order(), onc_2d.CVCount());
+	for (int i = 0; i < onc_2d.KnotCount(); ++i)
+	{
+		onc_3d.SetKnot(i, onc_2d.Knot(i));
+	}
+	ON_3dPoint p;
+	for (int i = 0; i < onc_2d.CVCount(); ++i)
+	{
+		onc_2d.GetCV(i, p);
+		onc_3d.SetCV(i, p);
+	}
+	if (onc_2d.IsRational())
+	{
+		for (int i = 0; i < onc_2d.CVCount(); ++i)
+		{
+			onc_3d.SetWeight(i, onc_2d.Weight(i));
+		}
+	}
+	return onc_3d;
+}

@@ -364,3 +364,12 @@ void ChiralityAddNurbsSurface(ONX_Model *model, const ON_NurbsSurface &ons, cons
 	ON_NurbsSurface *c = new ON_NurbsSurface(ons);
 	model->AddManagedModelGeometryComponent(c, att);
 }
+
+void ChiralityAddPlane(ONX_Model *model, const ON_PlaneSurface &p, const std::wstring &plane_name, int layer_index)
+{
+	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();
+	att->m_layer_index = layer_index;
+	att->m_name = plane_name.c_str();
+	ON_PlaneSurface *ops = new ON_PlaneSurface(p);
+	model->AddManagedModelGeometryComponent(ops, att);
+}

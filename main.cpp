@@ -30,63 +30,11 @@ void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string fi
 // int main ( int argc, const char* argv[] )
 int main()
 {
-	const std::string filename = "EulerBspline3D_Test-" + ChiralityPrintNowTime() + ".3dm";
+	const std::string filename = "Pentagram-" + ChiralityPrintNowTime() + ".3dm";
 	ON::Begin();
 	ONX_Model model;
 	Internal_SetExampleModelProperties(model, OPENNURBS__FUNCTION__, __FILE__);
 	model.AddDefaultLayer(nullptr, ON_Color::UnsetColor);
-
-	/*
-	ON_Xform trans = ON_Xform::TranslationTransformation(0, 0, -4);
-	ON_Xform rotate;
-	rotate.Rotation(1, 0, ON_3dVector(0, 0, 1), ON_3dPoint::Origin);
-	Add_Cylinder(model, L"gold_cylinder", 2, 6, ON_Color::SaturatedGold, rotate);
-	Add_Ball(model, L"blue_ball", 5, ON_Color::SaturatedBlue, trans);
-	FilletSurface* fillsurface = new FilletSurface();
-	ONX_ModelComponentIterator iter(*model, ON_ModelComponent::Type::ModelGeometry);
-	const ON_ModelComponent* mc0 = iter.FirstComponent();
-	ON_UUID uid = mc0->Id();
-	ON_ModelGeometryComponent mgc = model->ModelGeometryComponentFromId(uid);
-	const ON_Geometry* geo0 = mgc.Geometry(nullptr);
-	const ON_NurbsSurface* nsf0 = dynamic_cast<const ON_NurbsSurface*>(geo0);
-	const ON_ModelComponent* mc1 = iter.NextComponent();
-	uid = mc1->Id();
-	mgc = model->ModelGeometryComponentFromId(uid);
-	const ON_Geometry* geo1 = mgc.Geometry(nullptr);
-	const ON_NurbsSurface* nsf1 = dynamic_cast<const ON_NurbsSurface*>(geo1);
-	fillsurface->SetSurface(0, *nsf0);
-	fillsurface->SetSurface(1, *nsf1);
-	fillsurface->SetParameter(FilletSurface::InsectCurve0Knot::v0, 0.75, FilletSurface::InsectCurve1Knot::v1, 0.7);
-	fillsurface->SetRailCurve(0, 0);
-	fillsurface->ReverseVector(0);
-	fillsurface->ReverseVector(1);
-	fillsurface->ReverseRailCurve(1);
-	double knot[100] = { 0 };
-	FilletSurface::SetRailUniformKnot(100, knot, knot);
-	fillsurface->ComputeFillCurve(100, knot, knot);
-	fillsurface->Add_FillCurves(model, L"FillCurve", ON_Color::SaturatedGreen);
-	ON_NurbsSurface result_sknning;
-	fillsurface->Skinning(result_sknning, 100, knot);
-	const int layer_index = model->AddLayer(L"Skinning_Surface", ON_Color::SaturatedMagenta);
-	model->AddManagedModelGeometryComponent(
-		&result_sknning,
-		Internal_CreateManagedAttributes(layer_index, L"Skinning_Surface"));
-	delete fillsurface;
-	*/
-
-	/*
-	vector <ON_3dPoint> testparray;
-	testparray.push_back(ON_3dPoint(0, 0, 0));
-	testparray.push_back(ON_3dPoint(1, 0, 0));
-	testparray.push_back(ON_3dPoint(1, 1, 0));
-	testparray.push_back(ON_3dPoint(1, 1, 1));
-	testparray.push_back(ON_3dPoint(0, 1.5, 1));
-	testparray.push_back(ON_3dPoint(0, 2, 0));
-
-	PiecesClothoid3d* pc3d = new PiecesClothoid3d(testparray,
-		ON_3dVector(1, -0.5, 0), ON_3dVector(1, 0, -3), 8);
-	pc3d->Add_to_Model(model, L"test_piece_clothoid", ON_Color::SaturatedGreen);
-	*/
 
 	// Cornu_Spiral::Cornu_test(&model);
 	// EulerBspline2D::EulerBsplineTest(&model);
@@ -94,8 +42,10 @@ int main()
 	//  EulerBezier2D::YangMethodtest(&model);
 	//  EulerBezier3D::EulerBezier3DTest(&model);
 	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
-	//EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
-	Fillet_EB3D::Fillet_EB3D_Test(&model);
+	// EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
+	// Fillet_EB3D::Fillet_EB3D_Test(&model);
+	// EulerBezier2D::Pentagram(&model);
+	Fillet_EB3D::TwoSurfaces_Fillet_Test(&model);
 
 	ChiralityWrite3dmModel(&model, filename);
 	return 0;
