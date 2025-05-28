@@ -1,15 +1,15 @@
 #ifndef READ_H
 #define READ_H
-#include "opennurbs.h"
-#include "example_ud.h"
+#include "thirdparty/opennurbs/opennurbs.h"
+#include <string>
 
-static bool Dump3dmFileHelper(
-	const wchar_t *sFileName, // full name of file
-	ON_TextLog &dump)
+static bool Dump3dmFileHelper(const wchar_t *sFileName, // full name of file
+							  ON_TextLog &dump)
 {
 	dump.Print("====== FILENAME: %ls\n", sFileName);
 	ON_Workspace ws;
-	FILE *fp = ws.OpenFile(sFileName, L"rb"); // file automatically closed by ~ON_Workspace()
+	FILE *fp = ws.OpenFile(sFileName,
+						   L"rb"); // file automatically closed by ~ON_Workspace()
 	if (!fp)
 	{
 		dump.Print("**ERROR** Unable to open file.\n");
@@ -17,7 +17,6 @@ static bool Dump3dmFileHelper(
 	}
 
 	ON_BinaryFile file(ON::archive_mode::read3dm, fp);
-
 	int version = 0;
 	ON_String comment_block;
 	bool rc = file.Read3dmStartSection(&version, comment_block);
@@ -50,11 +49,8 @@ static bool Dump3dmFileHelper(
 Returns:
   True if .3dm file was successfully read into an ONX_Model class.
 */
-static bool ReadFileHelper(
-	const wchar_t *sFileName,
-	bool bVerboseTextDump,
-	bool bChunkDump,
-	ON_TextLog &dump)
+static bool ReadFileHelper(const wchar_t *sFileName, bool bVerboseTextDump,
+						   bool bChunkDump, ON_TextLog &dump)
 {
 	if (bChunkDump)
 	{
@@ -107,14 +103,11 @@ static bool ReadFileHelper(
 Returns:
   Number of files read.
 */
-static int ReadDirectoryHelper(
-	int directory_depth,
-	int maximum_directory_depth,
-	const wchar_t *directory_name,
-	const wchar_t *file_name_filter,
-	bool bVerboseTextDump,
-	bool bChunkDump,
-	ON_TextLog &dump)
+static int ReadDirectoryHelper(int directory_depth, int maximum_directory_depth,
+							   const wchar_t *directory_name,
+							   const wchar_t *file_name_filter,
+							   bool bVerboseTextDump, bool bChunkDump,
+							   ON_TextLog &dump)
 {
 	int file_count = 0;
 	if (directory_depth <= maximum_directory_depth)
@@ -125,9 +118,10 @@ static int ReadDirectoryHelper(
 		// read files in this directory
 		ON_FileIterator file_it;
 		bool bFoundDirectory = false;
-		for (bool bHaveFileSystemItem = (file_it.Initialize(directory_name, file_name_filter) && file_it.FirstItem());
-			 bHaveFileSystemItem;
-			 bHaveFileSystemItem = file_it.NextItem())
+		for (bool bHaveFileSystemItem =
+				 (file_it.Initialize(directory_name, file_name_filter) &&
+				  file_it.FirstItem());
+			 bHaveFileSystemItem; bHaveFileSystemItem = file_it.NextItem())
 		{
 			if (file_it.CurrentItemIsDirectory())
 			{
@@ -156,9 +150,10 @@ static int ReadDirectoryHelper(
 		if (bFoundDirectory && directory_depth < maximum_directory_depth)
 		{
 			ON_FileIterator dir_it;
-			for (bool bHaveFileSystemItem = (dir_it.Initialize(directory_name, nullptr) && dir_it.FirstItem());
-				 bHaveFileSystemItem;
-				 bHaveFileSystemItem = dir_it.NextItem())
+			for (bool bHaveFileSystemItem =
+					 (dir_it.Initialize(directory_name, nullptr) &&
+					  dir_it.FirstItem());
+				 bHaveFileSystemItem; bHaveFileSystemItem = dir_it.NextItem())
 			{
 				if (false == dir_it.CurrentItemIsDirectory())
 					continue;
@@ -171,13 +166,8 @@ static int ReadDirectoryHelper(
 					continue;
 
 				file_count += ReadDirectoryHelper(
-					directory_depth + 1,
-					maximum_directory_depth,
-					full_path,
-					file_name_filter,
-					bVerboseTextDump,
-					bChunkDump,
-					dump);
+					directory_depth + 1, maximum_directory_depth, full_path,
+					file_name_filter, bVerboseTextDump, bChunkDump, dump);
 			}
 		}
 	}
@@ -192,7 +182,8 @@ static void print_help(const char *example_read_exe_name)
 
 	printf("\n");
 	printf("SYNOPSIS:\n");
-	printf("  %s [-out:outputfilename.txt] [-c] [-r] <file or directory names>\n", example_read_exe_name);
+	printf("  %s [-out:outputfilename.txt] [-c] [-r] <file or directory names>\n",
+		   example_read_exe_name);
 	printf("\n");
 	printf("DESCRIPTION:\n");
 	printf("  If a file is listed, it is read as an opennurbs model file.\n");
@@ -208,30 +199,14 @@ static void print_help(const char *example_read_exe_name)
 	printf("      Recursivly reads files in subdirectories.\n");
 	printf("\n");
 	printf("EXAMPLE:\n");
-	printf("  %s -out:list.txt -resursive .../example_files\n", example_read_exe_name);
+	printf("  %s -out:list.txt -resursive .../example_files\n",
+		   example_read_exe_name);
 	printf("  with read all the opennurbs .3dm files in the\n");
 	printf("  example_files/ directory and subdirectories.\n");
 }
 
-#if defined(ON_COMPILER_MSC)
+void ChiralityRead3dmModel(const std::string &filename, ONX_Model *model);
 
-// When you run a C program, you can use either of the two wildcards
-// the question mark (?) and the asterisk (*) to specify filename
-// and path arguments on the command line.
-// By default, wildcards are not expanded in command-line arguments.
-// You can replace the normal argument vector argv loading routine with
-// a version that does expand wildcards by linking with the setargv.obj or wsetargv.obj file.
-// If your program uses a main function, link with setargv.obj.
-// If your program uses a wmain function, link with wsetargv.obj.
-// Both of these have equivalent behavior.
-// To link with setargv.obj or wsetargv.obj, use the /link option.
-//
-// For example:
-// cl example.c /link setargv.obj
-// The wildcards are expanded in the same manner as operating system commands.
-// (See your operating system user's guide if you are unfamiliar with wildcards.)
+void ChiralityModelDebugInfo(const std::string &filename);
 
-// example_read.vcxproj linkin options include setargv.obj.
-
-#endif
 #endif

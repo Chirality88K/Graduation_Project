@@ -3,10 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/",
-                "./**"
+                "${workspaceFolder}/"
             ],
-            "compilerPath": "D:/mingw64/bin/g++.exe",
+            "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "linux-gcc-x64",
@@ -15,7 +14,7 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/"
             ],
             "defines": [
                 "_DEBUG",

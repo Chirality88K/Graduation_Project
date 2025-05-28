@@ -61,7 +61,7 @@ void Fillet_EB3D::GenerateBone()
 		ON_3dVector ve = mVectorField[1](double(i) / double(num_of_bone));
 		ON_NurbsCurve *onc = new EulerBspline3D(mRailCurve[0].PointAt(u), mRailCurve[1].PointAt(u), vs, ve, num_cv);
 		mBoneStructure.push_back(onc);
-		//ChiralityDebugInfo(*onc, "Bone Structure" + std::to_string(i));
+		ChiralityDebugInfo(*onc, "Bone Structure" + std::to_string(i));
 	}
 }
 

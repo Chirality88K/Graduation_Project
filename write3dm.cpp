@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 #include <time.h>
+#include "ChiralityLog.h"
 
 void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 {
@@ -10,15 +11,16 @@ void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 	wchar_t *const wc = new wchar_t[filename.size() + 1];
 	std::mbstowcs(wc, filename.c_str(), filename.size() + 1);
 	bool success = model->Write(wc, 0, &error_log);
+	std::string output = "OpenNURBS Archive File:\t" + filename + "----";
 	if (success)
 	{
-		std::cout << "Successfully wrote ";
-		std::cout << (filename) << "\n";
+		output += "Successfully written.";
+		CHIRALITY_INFO(output);
 	}
 	else
 	{
-		std::cout << "Fail to wrtie ";
-		std::cout << (filename) << "\n";
+		output += "Fail to be written.";
+		CHIRALITY_ERROR(output);
 	}
 	delete[] wc;
 }
@@ -91,7 +93,7 @@ void Internal_SetExampleModelProperties(ONX_Model &model,
 		source_file_name = "";
 
 	model.m_sStartSectionComments =
-		"This was file created by OpenNURBS toolkit example code.";
+		"This was file created by Chirality.";
 
 	// set application information
 	const ON_wString wide_function_name(function_name);
@@ -166,7 +168,7 @@ void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_witho
 			lastkappa = kappa;
 		}
 		ofs.close();
-		std::cout << filename + " 2-dimension bezier curve curvatures written!" << std::endl;
+		CHIRALITY_INFO(filename + " 2-dimension bezier curve curvatures written!");
 		return;
 	}
 	if (onc.Dimension() == 3)
@@ -186,10 +188,10 @@ void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_witho
 			lastkappa = kappa;
 		}
 		ofs.close();
-		std::cout << filename + " 3-dimension bezier curve curvatures written!" << std::endl;
+		CHIRALITY_INFO(filename + " 3-dimension bezier curve curvatures written!");
 		return;
 	}
-	std::cout << "Fail to write curvatures: " + filename << std::endl;
+	CHIRALITY_ERROR(filename + "Fail to write curvatures!");
 }
 
 void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
@@ -223,7 +225,7 @@ void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_withou
 			lastkappa = kappa;
 		}
 		ofs.close();
-		std::cout << filename + " 2-dimension nurbs curve curvatures written!" << std::endl;
+		CHIRALITY_INFO(filename + " 2-dimension nurbs curve curvatures written!");
 		return;
 	}
 	if (onc.Dimension() == 3)
@@ -243,10 +245,10 @@ void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_withou
 			lastkappa = kappa;
 		}
 		ofs.close();
-		std::cout << filename + " 3-dimension nurbs curve curvatures written!" << std::endl;
+		CHIRALITY_INFO(filename + " 3-dimension nurbs curve curvatures written!");
 		return;
 	}
-	std::cout << "Fail to write curvatures: " + filename << std::endl;
+	CHIRALITY_ERROR(filename + "Fail to write curvatures!");
 }
 
 void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
@@ -270,7 +272,7 @@ void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_withou
 		ofs << std::endl;
 	}
 	ofs.close();
-	std::cout << filename + " nurbs curve position and tangent written!" << std::endl;
+	CHIRALITY_INFO(filename + " nurbs curve position and tangent written!");
 }
 
 void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
@@ -318,7 +320,7 @@ void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_wi
 			lastkappa = kappa;
 		}
 		ofs.close();
-		std::cout << filename + " 2-dimension nurbs curve debug written!" << std::endl;
+		CHIRALITY_INFO(filename + " 2-dimension nurbs curve debug written!");
 		return;
 	}
 	if (onc.Dimension() == 3)
@@ -341,10 +343,11 @@ void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_wi
 			lastkappa = kappa;
 		}
 		ofs.close();
-		std::cout << filename + " 3-dimension nurbs curve debug written!" << std::endl;
+		CHIRALITY_INFO(filename + " 3-dimension nurbs curve debug written!");
 		return;
 	}
 	ofs.close();
+	CHIRALITY_ERROR(filename + "Fail to write debug information!");
 }
 
 void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const std::wstring &curve_name, int layer_index)

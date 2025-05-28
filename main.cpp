@@ -15,6 +15,7 @@
 #include "EulerBspline2D.h"
 #include "EulerBezier3D.h"
 #include "EulerBspline3D.h"
+#include "read3dm.h"
 #include "write3dm.h"
 #include "Fillet_using_EB3d.h"
 const double PI = acos(-1.0);
@@ -32,22 +33,26 @@ int main()
 {
 	const std::string filename = "Pentagram-" + ChiralityPrintNowTime() + ".3dm";
 	ON::Begin();
-	ONX_Model model;
-	Internal_SetExampleModelProperties(model, OPENNURBS__FUNCTION__, __FILE__);
-	model.AddDefaultLayer(nullptr, ON_Color::UnsetColor);
+	ONX_Model model_to_write;
+	Internal_SetExampleModelProperties(model_to_write, OPENNURBS__FUNCTION__, filename.c_str());
+	model_to_write.AddDefaultLayer(nullptr, ON_Color::UnsetColor);
 
-	// Cornu_Spiral::Cornu_test(&model);
-	// EulerBspline2D::EulerBsplineTest(&model);
-	//   EulerBezier2D::EulerBezier2dTest(&model);
-	//  EulerBezier2D::YangMethodtest(&model);
-	//  EulerBezier3D::EulerBezier3DTest(&model);
-	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model);
-	// EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model);
-	// Fillet_EB3D::Fillet_EB3D_Test(&model);
-	// EulerBezier2D::Pentagram(&model);
-	Fillet_EB3D::TwoSurfaces_Fillet_Test(&model);
+	// Cornu_Spiral::Cornu_test(&model_to_write);
+	// EulerBspline2D::EulerBsplineTest(&model_to_write);
+	//   EulerBezier2D::EulerBezier2dTest(&model_to_write);
+	//  EulerBezier2D::YangMethodtest(&model_to_write);
+	//  EulerBezier3D::EulerBezier3DTest(&model_to_write);
+	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model_to_write);
+	// EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model_to_write);
+	// Fillet_EB3D::Fillet_EB3D_Test(&model_to_write);
+	// EulerBezier2D::Pentagram(&model_to_write);
+	Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
 
-	ChiralityWrite3dmModel(&model, filename);
+	ChiralityWrite3dmModel(&model_to_write, filename);
+	ONX_Model model_to_read;
+	Internal_SetExampleModelProperties(model_to_read, OPENNURBS__FUNCTION__, filename.c_str());
+	ChiralityRead3dmModel(filename, &model_to_read);
+	ChiralityModelDebugInfo(filename);
 	return 0;
 }
 
