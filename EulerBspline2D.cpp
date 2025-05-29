@@ -387,4 +387,115 @@ namespace EulerBspline2D
 			}
 		}
 	}
+    ON_NurbsCurve GenerateSmoothingCorner(ON_3dPoint start, ON_3dPoint corner, ON_3dPoint end)
+    {
+		int n = 4;
+		ON_3dVector Ts = (corner - start);
+		Ts.Unitize();
+		ON_NurbsCurve onc;
+		ON_3dVector v0 = corner - start;
+		ON_3dVector v1 = end - corner;
+		double product = ON_3dVector::DotProduct(v0, v1) / v1.Length() / v0.Length();
+		double alpha = acos(product);
+		if (v0.x * v1.y - v0.y * v1.x < 0)
+		{
+			alpha = -alpha;
+		}
+		while (!EulerBsplineSpiralCheck(onc) && n < 20)
+		{
+			double deltatheta = alpha / (n - 2) / (n - 2);
+			ON_3dVector temp = Ts;
+			ON_3dVector D = Ts;
+			for (int i = 1; i < n - 2; ++i)
+			{
+				temp.Rotate(deltatheta * i, ON_3dVector(0, 0, 1));
+				D += temp;
+			}
+			double pro = ON_3dVector::DotProduct(D, Ts) / D.Length();
+			pro = (std::min)(1.0, pro);
+			pro = (std::max)(-1.0, pro);
+			double beta = acos(pro);
+			if (Ts.x * D.y - Ts.y * D.x < 0) {
+				beta = -beta;
+			}
+			double length = cos(alpha / 2) / cos(alpha / 2 - beta) * (corner - start).Length() / D.Length();
+			temp = Ts * length;
+			onc.Create(2, false, 4, n + 1);
+			onc.SetCV(1, start);
+			ON_3dPoint p = start;
+			onc.SetCV(0, start - temp);
+			p += temp;
+			for (int i = 1; i < n; ++i)
+			{
+				onc.SetCV(i + 1, p);
+				temp.Rotate(deltatheta * i, ON_3dVector(0, 0, 1));
+				p += temp;
+			}
+			for (int i = 0; i < onc.KnotCount(); ++i)
+			{
+				onc.SetKnot(i, i + 1);
+			}
+			++n;
+		}
+		ON_NurbsCurve another_onc = onc;
+		v0.Unitize();
+		v1.Unitize();
+		ON_3dVector Axis = v1 - v0;
+		Axis.Unitize();
+		ON_3dPoint p;
+		for (int i = 0; i < another_onc.CVCount(); ++i)
+		{
+			another_onc.GetCV(i, p);
+			ON_3dVector project = ON_3dVector::DotProduct((p - corner), Axis) * Axis;
+			p = 2 * corner + 2 * project - p;
+			another_onc.SetCV(i, p);
+		}
+		another_onc.Reverse();
+		onc.Append(another_onc);
+		onc.SetDomain(0, 1);
+		return onc;
+    }
+
+	void SmoothCornerTest(ONX_Model* model)
+	{
+		// Compute 10 points
+		double Acute_vertices_distance_to_origin = 10.0;
+		double Blunt_vertices_distance_to_origin = Acute_vertices_distance_to_origin * sin(PI / 10.0) / sin(3 * PI / 10.0);
+		double Acute_vertices_polar_angle[5] = { PI / 10.0, PI / 2.0, 162 * PI / 180.0, 234 * PI / 180.0, 306 * PI / 180.0 };
+		double Blunt_vertices_polar_angle[5] = { 54 * PI / 180.0, 126 * PI / 180.0, 198 * PI / 180.0, 270 * PI / 180.0, 342 * PI / 180.0 };
+		ON_3dPoint Acute_vertices[5];
+		ON_3dPoint Blunt_vertices[5];
+		for (int i = 0; i < 5; ++i)
+		{
+			Acute_vertices[i] = ON_3dPoint(cos(Acute_vertices_polar_angle[i]), sin(Acute_vertices_polar_angle[i]), 0) * Acute_vertices_distance_to_origin;
+		}
+		for (int i = 0; i < 5; ++i)
+		{
+			Blunt_vertices[i] = ON_3dPoint(cos(Blunt_vertices_polar_angle[i]), sin(Blunt_vertices_polar_angle[i]), 0) * Blunt_vertices_distance_to_origin;
+		}
+		// connect these 10 points with lines
+		ON_3dPointArray Parray;
+		for (int i = 0; i < 5; ++i)
+		{
+			Parray.Append(Acute_vertices[i]);
+			Parray.Append(Blunt_vertices[i]);
+		}
+		Parray.Append(Acute_vertices[0]);
+		// Add these lines to model
+		const int polygon_layer_index = model->AddLayer(L"Frame", ON_Color::Black);
+		ON_PolylineCurve* opc = new ON_PolylineCurve(ON_Polyline(Parray));
+		ON_3dmObjectAttributes* attributes = new ON_3dmObjectAttributes();
+		attributes->m_layer_index = polygon_layer_index;
+		attributes->m_name = L"Pentagram_frame";
+		model->AddManagedModelGeometryComponent(opc, attributes);
+		// Compute Smoothing corner curves
+		const int curves_layer_index = model->AddLayer(L"Smoothing curves", ON_Color::SaturatedMagenta);
+		for (int i = 0; i < 10; ++i)
+		{
+			ON_3dPoint Start = (i == 0) ? Parray[9] : Parray[i - 1];
+			ON_3dPoint End = (i == 9) ? Parray[0] : Parray[i + 1];
+			ON_3dPoint Corner = Parray[i];
+			ChiralityAddNurbsCurve(model, GenerateSmoothingCorner(Start * 0.5 + Corner * 0.5, Corner, End * 0.5 + Corner * 0.5), L"curve" + std::to_wstring(i + 1), curves_layer_index);
+		}
+	}
 }

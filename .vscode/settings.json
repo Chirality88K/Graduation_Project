@@ -98,5 +98,6 @@
         "ranges": "cpp",
         "cfenv": "cpp",
         "typeindex": "cpp"
-    }
+    },
+    "C_Cpp.default.compilerPath": "D:/mingw64/bin/g++.exe"
 }

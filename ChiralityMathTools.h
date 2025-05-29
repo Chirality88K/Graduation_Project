@@ -2,12 +2,17 @@
 #define CHIRALITYMATHTOOLS_H
 #include "thirdparty/opennurbs/opennurbs.h"
 #include <vector>
+#include <functional>
 namespace ChiralityMath
 {
+	// 二分法求函数零点，要求初始左右点函数值异号
+	double Bisection(const std::function<double(double)> &, double L, double R, double eps = 1e-8);
 	double ArcLength(const ON_BezierCurve &, double from, double to);
 	double ArcLength(const ON_NurbsCurve &, double from, double to);
 	double ArcLength(const ON_BezierCurve &);
 	double ArcLength(const ON_NurbsCurve &);
+	// 返回一个参数序列，将给定的曲线的弧长等分
+	std::vector<double> GenerateUniformArcLength(const ON_NurbsCurve &onc, int num_param);
 	double Bernstein(int n, int i, double t);
 	double Torsion(const ON_BezierCurve &, double t);
 	ON_NurbsCurve UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve);

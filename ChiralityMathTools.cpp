@@ -1,5 +1,38 @@
 #include "ChiralityMathTools.h"
 #include "thirdparty/eigen/Eigen/Dense"
+#include <assert.h>
+
+double ChiralityMath::Bisection(const std::function<double(double)> &F, double L, double R, double eps)
+{
+	assert(L <= R);
+	double mid = (L + R) / 2;
+	double lv = F(L);
+	double rv = F(R);
+	double mv = F(mid);
+	assert(lv * rv <= 0);
+	int max_iter = 1000;
+	while (abs(mv) >= eps && max_iter > 0)
+	{
+		if (lv * mv >= 0 && mv * rv <= 0)
+		{
+			L = mid;
+		}
+		else if (rv * mv >= 0 && mv * lv <= 0)
+		{
+			R = mid;
+		}
+		else
+		{
+			assert(0);
+		}
+		mid = (L + R) / 2;
+		lv = F(L);
+		rv = F(R);
+		mv = F(mid);
+		max_iter--;
+	}
+	return mid;
+}
 
 double ChiralityMath::ArcLength(const ON_BezierCurve &obc, double from, double to)
 {
@@ -32,6 +65,27 @@ double ChiralityMath::ArcLength(const ON_NurbsCurve &onc)
 	double t0, t1;
 	onc.GetDomain(&t0, &t1);
 	return ArcLength(onc, t0, t1);
+}
+
+std::vector<double> ChiralityMath::GenerateUniformArcLength(const ON_NurbsCurve &onc, int num_param)
+{
+	double total_length = ArcLength(onc);
+	std::vector<double> length_param(num_param, 0.0);
+	for (int i = 1; i < num_param; ++i)
+	{
+		length_param[i] = length_param[i - 1] + total_length / (num_param - 1);
+	}
+	std::vector<double> param(num_param, 0.0);
+	onc.GetDomain(&param[0], &param[num_param - 1]);
+	for (int i = 1; i <= num_param - 2; ++i)
+	{
+		auto lambda = [=](double t) -> double
+		{
+			return ArcLength(onc, param[0], t) - length_param[i];
+		};
+		param[i] = Bisection(lambda, param[i - 1], param.back());
+	}
+	return param;
 }
 
 double ChiralityMath::Bernstein(int n, int i, double t)
