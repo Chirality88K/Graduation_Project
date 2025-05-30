@@ -442,7 +442,7 @@ namespace EulerBspline2D
 			{
 				beta = -beta;
 			}
-			double length = sin(alpha / 2) / sin(alpha / 2 + beta) *
+			double length = cos(alpha / 2) / cos(alpha / 2 - beta) *
 							(start - corner).Length() / PsPe_divide_l.Length();
 			ON_3dPoint P0 = start - length * Ts;
 			onc.Create(2, false, 4, n + 1);
