@@ -526,6 +526,7 @@ namespace EulerBspline2D
 			ON_NurbsCurve onc = GenerateSmoothingCorner(
 				Start * 0.5 + Corner * 0.5, Corner, End * 0.5 + Corner * 0.5);
 			ChiralityDebugInfo(onc, "B-Spline Debug" + std::to_string(i));
+			ChiralityDebugforR(onc, "B-Spline Debug for R " + std::to_string(i));
 			ChiralityAddNurbsCurve(model, onc, L"curve" + std::to_wstring(i + 1), curves_layer_index);
 		}
 	}

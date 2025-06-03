@@ -302,61 +302,35 @@ namespace EulerBezier2D
 		Parray.Append(P[0]);
 		for (int i = 0; i < N; ++i)
 		{
-			ON_BezierCurve *obc0 = new ON_BezierCurve();
-			ON_BezierCurve *obc1 = new ON_BezierCurve();
 			ON_3dPoint Start = (i == 0) ? P[N - 1] : P[i - 1];
 			ON_3dPoint End = (i == N - 1) ? P[0] : P[i + 1];
 			ON_3dPoint Corner = P[i];
 			ON_3dVector v0 = Corner - Start;
 			ON_3dVector v1 = End - Corner;
-			double product = ON_3dVector::DotProduct(v0, v1) / v1.Length() / v0.Length();
-			double alpha = acos(product);
-			if (v0.x * v1.y - v0.y * v1.x < 0)
-			{
-				alpha = -alpha;
-			}
-			SmoothingCorner(obc0, Start * (1.0 / 3.0) + Corner * (2.0 / 3.0), Corner, alpha);
-			v0.Unitize();
-			v1.Unitize();
-			GenerateSymmetry(obc1, obc0, Corner, v1 - v0);
 
-			ON_NurbsCurve **onc0 = new ON_NurbsCurve *();
-			(*onc0) = new ON_NurbsCurve();
-			obc0->GetNurbForm(**onc0);
-			ON_NurbsCurve **onc1 = new ON_NurbsCurve *();
-			(*onc1) = new ON_NurbsCurve();
-			obc1->GetNurbForm(**onc1);
-
-			ON_3dmObjectAttributes *attributes0 = new ON_3dmObjectAttributes();
-			attributes0->m_layer_index = layer_index;
-			attributes0->m_name = (L"EulerBezier_No." + std::to_wstring(i + 1)).c_str();
-			model->AddManagedModelGeometryComponent(*onc0, attributes0);
-			ON_3dmObjectAttributes *attributes1 = new ON_3dmObjectAttributes();
-			attributes1->m_layer_index = layer_index;
-			attributes1->m_name = (L"EulerBezier1_No." + std::to_wstring(i + 1)).c_str();
-			model->AddManagedModelGeometryComponent(*onc1, attributes1);
-			delete onc0;
-			delete onc1;
-
+			ON_NurbsCurve onc = GenerateSmoothingCurve(Start * (1.0 / 3.0) + Corner * (2.0 / 3.0), Corner, End * (1.0 / 3.0) + Corner * (2.0 / 3.0));
+			
+			ChiralityAddNurbsCurve(model, onc, L"EulerBezier", layer_index);
+			ChiralityDebugforR(onc, "EulerBezier Debug for R" + std::to_string(i));
 			Q[i * 2] = Start * (1.0 / 3.0) + Corner * (2.0 / 3.0);
 			Q[i * 2 + 1] = End * (1.0 / 3.0) + Corner * (2.0 / 3.0);
 		}
+		
 		const int polygon_layer_index = model->AddLayer(L"EulerBezier2dControlPoints", ON_Color::Black);
 		ON_PolylineCurve *opc = new ON_PolylineCurve(ON_Polyline(Parray));
 		ON_3dmObjectAttributes *attributes = new ON_3dmObjectAttributes();
 		attributes->m_layer_index = polygon_layer_index;
 		attributes->m_name = L"EulerBezier2dControlPoints";
 		model->AddManagedModelGeometryComponent(opc, attributes);
-
-		const int lines_layer_index = model->AddLayer(L"Lines", ON_Color::SaturatedMagenta);
-		ON_3dmObjectAttributes *attributes_lines = new ON_3dmObjectAttributes();
-		attributes_lines->m_layer_index = lines_layer_index;
-		attributes_lines->m_name = L"Lines";
+		
+		const int lines_layer_index = model->AddLayer(L"MidLines", ON_Color::SaturatedMagenta);
 		for (int i = 0; i < N; ++i)
 		{
-			model->AddManagedModelGeometryComponent(new ON_LineCurve(
-														Q[(2 * i + 1) % (2 * N)], Q[(2 * i + 2) % (2 * N)]),
-													attributes_lines);
+			ON_3dmObjectAttributes* attributes_lines = new ON_3dmObjectAttributes();
+			attributes_lines->m_layer_index = lines_layer_index;
+			attributes_lines->m_name = (L"Lines" + std::to_wstring(i)).c_str();
+			ON_LineCurve* olc = new ON_LineCurve(Q[(2 * i + 1) % (2 * N)], Q[(2 * i + 2) % (2 * N)]);
+			model->AddManagedModelGeometryComponent(olc, attributes_lines);
 		}
 	}
 
@@ -421,7 +395,9 @@ namespace EulerBezier2D
 			ON_3dPoint Start = (i == 0) ? Parray[9] : Parray[i - 1];
 			ON_3dPoint End = (i == 9) ? Parray[0] : Parray[i + 1];
 			ON_3dPoint Corner = Parray[i];
-			ChiralityAddNurbsCurve(model, GenerateSmoothingCurve(Start * 0.5 + Corner * 0.5, Corner, End * 0.5 + Corner * 0.5), L"curve" + std::to_wstring(i + 1), curves_layer_index);
+			ON_NurbsCurve onc = GenerateSmoothingCurve(Start * 0.5 + Corner * 0.5, Corner, End * 0.5 + Corner * 0.5);
+			ChiralityAddNurbsCurve(model, onc, L"curve" + std::to_wstring(i + 1), curves_layer_index);
+			ChiralityDebugforR(onc, "Bezier 2d debug for R " + std::to_string(i));
 		}
 	}
 }

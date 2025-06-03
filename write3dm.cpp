@@ -350,6 +350,60 @@ void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_wi
 	CHIRALITY_ERROR(filename + "Fail to write debug information!");
 }
 
+void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
+{
+	std::string filename = filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::ofstream ofs(filename);
+	ON_3dPoint p;
+	double k0 = 0;
+	double kn = 1;
+	onc.GetDomain(&k0, &kn);
+	double t = 0;
+	double kappa = 0;
+	ON_3dVector v;
+	ON_3dVector v1;
+	ON_3dVector v2;
+	if (onc.Dimension() == 2)
+	{
+		for (int i = 0; i <= 1000; i++)
+		{
+			t = (kn - k0) / 1000 * i + k0;
+			v = onc.TangentAt(t);
+			onc.Ev2Der(t, p, v1, v2);
+			kappa = v1.x * v2.y - v1.y * v2.x;
+			kappa = kappa / pow(v1.Length(), 3);
+			ofs << std::fixed << std::setprecision(6) << t << "\t";
+			//ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
+			//ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
+			ofs << std::fixed << std::setprecision(6) << kappa;			
+			ofs << std::endl;
+		}
+		ofs.close();
+		CHIRALITY_INFO(filename + " 2-dimension nurbs curve debug written!");
+		return;
+	}
+	if (onc.Dimension() == 3)
+	{
+		for (int i = 0; i <= 1000; i++)
+		{
+			t = (kn - k0) / 1000 * i + k0;
+			v = onc.TangentAt(t);
+			onc.Ev2Der(t, p, v1, v2);
+			kappa = onc.CurvatureAt(t).Length();
+			ofs << std::fixed << std::setprecision(6) << t << "\t";
+			//ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
+			//ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
+			ofs << std::fixed << std::setprecision(6) << kappa;
+			ofs << std::endl;
+		}
+		ofs.close();
+		CHIRALITY_INFO(filename + " 3-dimension nurbs curve debug written!");
+		return;
+	}
+	ofs.close();
+	CHIRALITY_ERROR(filename + "Fail to write debug information!");
+}
+
 void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const std::wstring &curve_name, int layer_index)
 {
 	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();

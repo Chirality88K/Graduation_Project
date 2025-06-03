@@ -39,7 +39,7 @@ int main()
 
 	// Cornu_Spiral::Cornu_test(&model_to_write);
 	// EulerBspline2D::EulerBsplineTest(&model_to_write);
-	//   EulerBezier2D::EulerBezier2dTest(&model_to_write);
+	   EulerBezier2D::EulerBezier2dTest(&model_to_write);
 	//  EulerBezier2D::YangMethodtest(&model_to_write);
 	//  EulerBezier3D::EulerBezier3DTest(&model_to_write);
 	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model_to_write);
@@ -47,7 +47,7 @@ int main()
 	// Fillet_EB3D::Fillet_EB3D_Test(&model_to_write);
 	// EulerBezier2D::Pentagram(&model_to_write);
 	//Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
-	EulerBspline2D::SmoothCornerTest(&model_to_write);
+	//EulerBspline2D::SmoothCornerTest(&model_to_write);
 
 	ChiralityWrite3dmModel(&model_to_write, filename);
 	ONX_Model model_to_read;

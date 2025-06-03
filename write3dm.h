@@ -23,6 +23,7 @@ void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_witho
 void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "NurbsCurveCurvature");
 void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Pos&Tan");
 void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Bspline Debug");
+void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Debug_for_R");
 // 该函数内会自动使用new为Curve分配内存
 void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const std::wstring &curve_name, int layer_index);
 // 该函数内会自动使用new为Surface分配内存
