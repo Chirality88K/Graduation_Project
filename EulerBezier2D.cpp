@@ -124,7 +124,7 @@ namespace EulerBezier2D
 		OBC->GetCV(0, p0);
 		OBC->GetCV(m, pm);
 		double lengthbound = 2 * (p0 - pm).Length();
-		lengthbound = (std::max)(lengthavg, 10.0);
+		//lengthbound = (std::max)(lengthavg, 10.0);
 
 		while (s_count < max_count && thetaDD > 1e-6 && lengthavg < lengthbound)
 		{

@@ -18,6 +18,7 @@
 #include "read3dm.h"
 #include "write3dm.h"
 #include "Fillet_using_EB3d.h"
+#include "EulerPolygon3D.h"
 const double PI = acos(-1.0);
 
 using namespace std;
@@ -31,7 +32,7 @@ void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string fi
 // int main ( int argc, const char* argv[] )
 int main()
 {
-	const std::string filename = "Pentagram-" + ChiralityPrintNowTime() + ".3dm";
+	const std::string filename = "EulerPolygonTest-" + ChiralityPrintNowTime() + ".3dm";
 	ON::Begin();
 	ONX_Model model_to_write;
 	Internal_SetExampleModelProperties(model_to_write, OPENNURBS__FUNCTION__, filename.c_str());
@@ -39,15 +40,16 @@ int main()
 
 	// Cornu_Spiral::Cornu_test(&model_to_write);
 	// EulerBspline2D::EulerBsplineTest(&model_to_write);
-	   EulerBezier2D::EulerBezier2dTest(&model_to_write);
+	// EulerBezier2D::EulerBezier2dTest(&model_to_write);
 	//  EulerBezier2D::YangMethodtest(&model_to_write);
 	//  EulerBezier3D::EulerBezier3DTest(&model_to_write);
 	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model_to_write);
 	// EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model_to_write);
 	// Fillet_EB3D::Fillet_EB3D_Test(&model_to_write);
 	// EulerBezier2D::Pentagram(&model_to_write);
-	//Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
-	//EulerBspline2D::SmoothCornerTest(&model_to_write);
+	// Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
+	// EulerBspline2D::SmoothCornerTest(&model_to_write);
+	EulerPolygon3D::EulerPolygonTest(&model_to_write);
 
 	ChiralityWrite3dmModel(&model_to_write, filename);
 	ONX_Model model_to_read;
