@@ -126,9 +126,8 @@ std::vector<double> EulerPolygon3D::ComputeLength() const
 	std::vector<double> result(mDiscretePolygon.size() - 1, 0.0);
 	for (size_t i = 0; i < mDiscretePolygon.size() - 1; ++i)
 	{
-		ON_3dPoint edge1 = mDiscretePolygon[i] - mDiscretePolygon[i - 1];
-		ON_3dPoint edge2 = mDiscretePolygon[i + 1] - mDiscretePolygon[i];
-		result[i] = edge1.DistanceTo(edge2);
+		ON_3dVector edge2 = mDiscretePolygon[i + 1] - mDiscretePolygon[i];
+		result[i] = edge2.Length();
 	}
 	return result;
 }
@@ -167,7 +166,7 @@ void EulerPolygon3D::Smoothing()
 	double thetaDD = 10.0;
 	double lengthavg = 0.0;
 	double lengthbound = 2 * (mDiscretePolygon[0] - mDiscretePolygon.back()).Length();
-	while (s_count < max_count && thetaDD < 1e-6 && lengthavg < lengthbound)
+	while (s_count < max_count && thetaDD > 1e-6 && lengthavg < lengthbound)
 	{
 		std::vector<double> new_angle_theta = Angle_Theta;
 		std::vector<double> new_angle_phi = Angle_Phi;
@@ -190,6 +189,7 @@ void EulerPolygon3D::Smoothing()
 			double z1 = (2 * L + A * h + sqrt(DELTA)) / (2 * A);
 			double z2 = (2 * L + A * h - sqrt(DELTA)) / (2 * A);
 			re.z = (abs(z1 - h / 2) > abs(z2 - h / 2)) ? z2 : z1;
+			re.z += mDiscretePolygon[i - 1].z;
 			mDiscretePolygon[i] = re;
 		}
 		thetaDD = 0;
