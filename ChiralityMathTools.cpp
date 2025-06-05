@@ -107,31 +107,35 @@ double ChiralityMath::Bernstein(int n, int i, double t)
 	return obc.PointAt(t).x;
 }
 
-double ChiralityMath::Torsion(const ON_BezierCurve &obc, double t)
+double ChiralityMath::Torsion(const ON_NurbsCurve &onc, double t)
 {
-	if (obc.Degree() < 3)
+	if (onc.Degree() < 3 || onc.Dimension() < 3 || onc.IsRational())
 	{
 		return 0.0;
 	}
-	ON_3dVector v1;
-	ON_3dVector v2;
-	ON_3dVector v3;
-	ON_3dPoint p;
-	obc.Ev2Der(t, p, v1, v2);
-	int n = obc.Degree();
-	ON_3dPoint *cp = new ON_3dPoint[n + 1];
-	for (int i = 0; i < n + 1; ++i)
+	ON_NurbsCurve der_onc(3, false, onc.Order() - 1, onc.CVCount() - 1);
+	int k = onc.Order();
+	int n = onc.CVCount() - 1;
+	for (int i = 1; i <= n; ++i)
 	{
-		obc.GetCV(i, *(cp + i));
+		ON_3dPoint p1, p2;
+		onc.GetCV(i, p1);
+		onc.GetCV(i - 1, p2);
+		double t1 = onc.Knot(i + k - 1);
+		double t2 = onc.Knot(i);
+		der_onc.SetCV(i - 1, (k - 1) / (t1 - t2) * ON_3dPoint(p1 - p2));
 	}
-	ON_BezierCurve obc3der(3, false, obc.Order() - 3);
-	for (int i = 0; i < obc3der.CVCount(); ++i)
+	for (int i = 0; i < der_onc.KnotCount(); ++i)
 	{
-		obc3der.SetCV(i, ON_3dPoint(n * (n - 1) * (n - 2) * (cp[i + 3] - 3 * cp[i + 2] + 3 * cp[i + 1] - cp[i])));
+		der_onc.SetKnot(i, onc.Knot(i + 1));
 	}
-	v3 = obc3der.PointAt(t);
-	delete[] cp;
-	return ON_3dVector::DotProduct(ON_3dVector::CrossProduct(v1, v2), v3) / (ON_3dVector::CrossProduct(v1, v2).LengthSquared());
+	ON_3dPoint first_der_p;
+	ON_3dVector second_der;
+	ON_3dVector third_der;
+	der_onc.Ev2Der(t, first_der_p , second_der, third_der);
+	ON_3dVector first_der = ON_3dVector(first_der_p);
+	ON_3dVector cross_vector = ON_3dVector::CrossProduct(first_der, second_der);
+	return ON_3dVector::DotProduct(cross_vector, third_der) / pow(cross_vector.Length(), 3);
 }
 
 ON_NurbsCurve ChiralityMath::UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)

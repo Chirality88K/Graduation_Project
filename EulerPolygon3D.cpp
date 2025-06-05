@@ -77,7 +77,7 @@ EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_
 void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
 {
 	double a = 10.0;
-	double b = 0.1;
+	double b = 0.5;
 	double alpha = PI / 3;
 	auto spiral = [a, b, alpha](double theta) -> ON_3dPoint
 	{
@@ -90,9 +90,10 @@ void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
 		return v;
 	};
 
-	double t0 = 0.0;
-	double t1 = PI * 0.7;
+	double t0 = -0.5 * PI;
+	double t1 = PI * 0.5;
 	EulerPolygon3D ep3d(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1));
+	// EulerPolygon3D ep3d(ON_3dPoint(10, 10, 0), ON_3dVector(-1, 3, 1));
 	ON_NurbsCurve onc = ep3d.ToBezier();
 	const int layer_index = model->AddLayer(L"test_layer", ON_Color::SaturatedBlue);
 	ChiralityAddNurbsCurve(model, onc, L"test", layer_index);
@@ -256,7 +257,7 @@ void EulerPolygon3D::BuildUp(ON_3dPoint PE, ON_3dVector ve)
 	mDiscretePolygon[3] = PE;
 	Smoothing();
 	// 迭代
-	const int times = 20;
+	const int times = 30;
 	for (int i = 0; i < times; ++i)
 	{
 		Elevate();

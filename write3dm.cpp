@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <time.h>
 #include "ChiralityLog.h"
+#include "ChiralityMathTools.h"
 
 void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 {
@@ -393,7 +394,8 @@ void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_wi
 			ofs << std::fixed << std::setprecision(6) << t << "\t";
 			//ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
 			//ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
-			ofs << std::fixed << std::setprecision(6) << kappa;
+			ofs << std::fixed << std::setprecision(6) << kappa << "\t";
+			ofs << ChiralityMath::Torsion(onc, t);
 			ofs << std::endl;
 		}
 		ofs.close();
