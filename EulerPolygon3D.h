@@ -17,9 +17,9 @@ class EulerPolygon3D
 {
 public:
 	// 默认起点为原点，起始切向是(1,0,0)，PE位于xOy平面上
-	EulerPolygon3D(PolarPoint3d PE, ON_3dVector ve);
-	EulerPolygon3D(PolarPoint3d PS, PolarPoint3d PE, ON_3dVector vs,
-				   ON_3dVector ve, int num = 50);
+	EulerPolygon3D(ON_3dPoint PE, ON_3dVector ve);
+	EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs,
+				   ON_3dVector ve);
 	static void EulerPolygonTest(ONX_Model *model);
 
 private:
@@ -33,5 +33,6 @@ private:
 	void Elevate();
 	void Smoothing();
 	ON_NurbsCurve ToBezier() const;
+	void BuildUp(ON_3dPoint PE, ON_3dVector ve);
 };
 #endif

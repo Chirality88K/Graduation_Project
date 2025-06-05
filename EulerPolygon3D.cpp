@@ -50,34 +50,49 @@ ON_3dPoint PolarPoint3d::CartesianCoordinates() const
 	return p;
 }
 
-EulerPolygon3D::EulerPolygon3D(PolarPoint3d PE, ON_3dVector ve)
+EulerPolygon3D::EulerPolygon3D(ON_3dPoint PE, ON_3dVector ve)
 {
-	// Init
-	ve.Unitize();
-	double L = PE.mDistance / 3.0;
-	mDiscretePolygon.resize(4);
-	mDiscretePolygon[0] = ON_3dPoint::Origin;
-	mDiscretePolygon[1] = ON_3dPoint(L, 0, 0);
-	mDiscretePolygon[2] = PE.CartesianCoordinates() - ve * L;
-	mDiscretePolygon[3] = PE.CartesianCoordinates();
-	Smoothing();
-	// 迭代
-	const int times = 10;
-	for (int i = 0; i < times; ++i)
+	BuildUp(PE, ve);
+}
+
+EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_3dVector ve)
+{
+	ON_Plane old_plane(ON_3dPoint::Origin, vs, PE - PS);
+	ON_Plane new_plane(ON_3dPoint::Origin, ON_3dVector::XAxis, ON_3dVector::YAxis);
+	ON_Xform rot;
+	rot.Rotation(old_plane, new_plane);
+	ON_3dVector new_ve = ve;
+	ON_3dPoint new_pe = PE - PS;
+	new_ve.Transform(rot);
+	new_pe.Transform(rot);
+	BuildUp(new_pe, new_ve);
+	ON_Xform inv_rot = rot.Inverse();
+	for (ON_3dPoint &p : mDiscretePolygon)
 	{
-		Elevate();
-		Smoothing();
+		p.Transform(inv_rot);
+		p += PS;
 	}
 }
 
-EulerPolygon3D::EulerPolygon3D(PolarPoint3d PS, PolarPoint3d PE, ON_3dVector vs,
-							   ON_3dVector ve, int num) {}
-
 void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
 {
-	PolarPoint3d p_end(PI / 4, 0.0, 15.0);
-	ON_3dVector ve(-1, 3, 1);
-	EulerPolygon3D ep3d(p_end, ve);
+	double a = 10.0;
+	double b = 0.1;
+	double alpha = PI / 3;
+	auto spiral = [a, b, alpha](double theta) -> ON_3dPoint
+	{
+		return ON_3dPoint(sin(alpha) * cos(theta), sin(alpha) * sin(theta), cos(alpha)) * a * exp(b * theta);
+	};
+	auto spiral_tan = [b, alpha](double theta) -> ON_3dVector
+	{
+		ON_3dVector v(b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), b * sin(alpha) * sin(theta) + sin(alpha) * cos(theta), b * cos(alpha));
+		v.Unitize();
+		return v;
+	};
+
+	double t0 = 0.0;
+	double t1 = PI * 0.7;
+	EulerPolygon3D ep3d(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1));
 	ON_NurbsCurve onc = ep3d.ToBezier();
 	const int layer_index = model->AddLayer(L"test_layer", ON_Color::SaturatedBlue);
 	ChiralityAddNurbsCurve(model, onc, L"test", layer_index);
@@ -227,4 +242,24 @@ ON_NurbsCurve EulerPolygon3D::ToBezier() const
 	ON_NurbsCurve onc;
 	obc.GetNurbForm(onc);
 	return onc;
+}
+
+void EulerPolygon3D::BuildUp(ON_3dPoint PE, ON_3dVector ve)
+{
+	// Init
+	ve.Unitize();
+	double L = PE.DistanceTo(ON_3dPoint::Origin) / 3.0;
+	mDiscretePolygon.resize(4);
+	mDiscretePolygon[0] = ON_3dPoint::Origin;
+	mDiscretePolygon[1] = ON_3dPoint(L, 0, 0);
+	mDiscretePolygon[2] = PE - ve * L;
+	mDiscretePolygon[3] = PE;
+	Smoothing();
+	// 迭代
+	const int times = 20;
+	for (int i = 0; i < times; ++i)
+	{
+		Elevate();
+		Smoothing();
+	}
 }
