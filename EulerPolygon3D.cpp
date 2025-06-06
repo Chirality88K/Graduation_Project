@@ -3,6 +3,8 @@
 #include "ChiralityMathTools.h"
 #include <string>
 #include "ChiralityLog.h"
+#include <locale>
+#include <codecvt>
 extern const double PI;
 PolarPoint3d::PolarPoint3d(double theta, double phi, double dis)
 {
@@ -89,7 +91,7 @@ EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_
 void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
 {
 	double a = 10.0;
-	double b = 0.5;
+	double b = -0.5;
 	double alpha = PI / 3;
 	auto spiral = [a, b, alpha](double theta) -> ON_3dPoint
 	{
@@ -102,20 +104,21 @@ void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
 		return v;
 	};
 
-	double t0 = -0.5 * PI;
-	double t1 = PI * 0.3;
-	EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), EulerPolygon3D::CurveType::Bezier);
-	EulerPolygon3D ep_bspline(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), EulerPolygon3D::CurveType::B_spline);
-	// EulerPolygon3D ep3d(ON_3dPoint(10, 10, 0), ON_3dVector(-1, 3, 1));
-	ON_NurbsCurve onc = ep_bezier.GetCurve();
-	const int layer_index = model->AddLayer(L"test_layer", ON_Color::SaturatedBlue);
-	ChiralityAddNurbsCurve(model, onc, L"test1", layer_index);
-	ChiralityDebugInfo(onc, "bezier_debug");
-	ChiralityDebugforR(onc, "bezier_for_R");
-	onc = ep_bspline.GetCurve();
-	ChiralityAddNurbsCurve(model, onc, L"test2", layer_index);
-	ChiralityDebugInfo(onc, "b-spline_debug");
-	ChiralityDebugforR(onc, "b-spline_for_R");
+	ON_Color color[7] = {ON_Color::SaturatedRed, ON_Color(255, 128, 0), ON_Color::SaturatedYellow,
+						 ON_Color::SaturatedGreen, ON_Color::SaturatedCyan, ON_Color::SaturatedBlue, ON_Color(76, 0, 153)};
+	std::string color_name[7] = {"Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"};
+	for (int i = 0; i < 7; ++i)
+	{
+		double t0 = 5.0 / 7.0 * i;
+		double t1 = t0 + 5.0 / 7.0;
+		EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), EulerPolygon3D::CurveType::Bezier);
+		ON_NurbsCurve onc = ep_bezier.GetCurve();
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+		const int layer_index = model->AddLayer(conv.from_bytes(color_name[i]).c_str(), color[i]);
+		ChiralityAddNurbsCurve(model, onc, conv.from_bytes(color_name[i] + " bezier curve").c_str(), layer_index);
+		ChiralityDebugInfo(onc, color_name[i] + " bezier_debug");
+		ChiralityDebugforR(onc, color_name[i] + " bezier_for_R");
+	}
 }
 
 std::vector<double> EulerPolygon3D::ComputeDeltaTheta() const
