@@ -132,10 +132,10 @@ double ChiralityMath::Torsion(const ON_NurbsCurve &onc, double t)
 	ON_3dPoint first_der_p;
 	ON_3dVector second_der;
 	ON_3dVector third_der;
-	der_onc.Ev2Der(t, first_der_p , second_der, third_der);
+	der_onc.Ev2Der(t, first_der_p, second_der, third_der);
 	ON_3dVector first_der = ON_3dVector(first_der_p);
 	ON_3dVector cross_vector = ON_3dVector::CrossProduct(first_der, second_der);
-	return ON_3dVector::DotProduct(cross_vector, third_der) / pow(cross_vector.Length(), 3);
+	return ON_3dVector::DotProduct(cross_vector, third_der) / cross_vector.LengthSquared();
 }
 
 ON_NurbsCurve ChiralityMath::UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)
