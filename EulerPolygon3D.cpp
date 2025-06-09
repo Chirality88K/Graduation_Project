@@ -109,8 +109,8 @@ void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 	std::string color_name[7] = {"Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"};
 	for (int i = 0; i < 7; ++i)
 	{
-		double t0 = 5.0 / 7.0 * i;
-		double t1 = t0 + 5.0 / 7.0;
+		double t0 = 6.0 / 7.0 * i;
+		double t1 = t0 + 6.0 / 7.0;
 		EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), EulerPolygon3D::CurveType::Bezier);
 		ON_NurbsCurve onc = ep_bezier.GetCurve();
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;

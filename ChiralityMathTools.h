@@ -14,7 +14,6 @@ namespace ChiralityMath
 	// 返回一个参数序列，将给定的曲线的弧长等分
 	std::vector<double> GenerateUniformArcLength(const ON_NurbsCurve &onc, int num_param);
 	double Bernstein(int n, int i, double t);
-	ON_NurbsCurve DerivativeNurbscurveForNon_Rational(const ON_NurbsCurve &onc, int der_order = 1);
 	double Torsion(const ON_NurbsCurve &, double t);
 	ON_NurbsCurve UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve);
 	void Elevate(ON_NurbsCurve &onc);
