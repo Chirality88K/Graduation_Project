@@ -107,13 +107,13 @@ double ChiralityMath::Bernstein(int n, int i, double t)
 	return obc.PointAt(t).x;
 }
 
-double ChiralityMath::Torsion(const ON_NurbsCurve &onc, double t)
+ON_NurbsCurve ChiralityMath::DerivativeNurbscurveForNon_Rational(const ON_NurbsCurve &onc, int der_order)
 {
-	if (onc.Degree() < 3 || onc.Dimension() < 3 || onc.IsRational())
+	if (der_order < 1)
 	{
-		return 0.0;
+		return onc;
 	}
-	ON_NurbsCurve der_onc(3, false, onc.Order() - 1, onc.CVCount() - 1);
+	ON_NurbsCurve der_onc(onc.Dimension(), false, onc.Order() - 1, onc.CVCount() - 1);
 	int k = onc.Order();
 	int n = onc.CVCount() - 1;
 	for (int i = 1; i <= n; ++i)
@@ -129,13 +129,28 @@ double ChiralityMath::Torsion(const ON_NurbsCurve &onc, double t)
 	{
 		der_onc.SetKnot(i, onc.Knot(i + 1));
 	}
-	ON_3dPoint first_der_p;
-	ON_3dVector second_der;
-	ON_3dVector third_der;
-	der_onc.Ev2Der(t, first_der_p, second_der, third_der);
-	ON_3dVector first_der = ON_3dVector(first_der_p);
+	if (der_order == 1)
+	{
+		return der_onc;
+	}
+	return DerivativeNurbscurveForNon_Rational(der_onc, der_order - 1);
+}
+
+double ChiralityMath::Torsion(const ON_NurbsCurve &onc, double t)
+{
+	if (onc.Degree() < 3 || onc.Dimension() < 3 || onc.IsRational())
+	{
+		return 0.0;
+	}
+	ON_NurbsCurve der_onc_1 = DerivativeNurbscurveForNon_Rational(onc);
+	ON_NurbsCurve der_onc_2 = DerivativeNurbscurveForNon_Rational(der_onc_1);
+	ON_NurbsCurve der_onc_3 = DerivativeNurbscurveForNon_Rational(der_onc_2);
+	ON_3dPoint first_der = der_onc_1.PointAt(t);
+	ON_3dPoint second_der = der_onc_2.PointAt(t);
+	ON_3dPoint third_der = der_onc_3.PointAt(t);
 	ON_3dVector cross_vector = ON_3dVector::CrossProduct(first_der, second_der);
-	return ON_3dVector::DotProduct(cross_vector, third_der) / cross_vector.LengthSquared();
+	double torsion = ON_3dVector::DotProduct(cross_vector, third_der) / cross_vector.LengthSquared();
+	return torsion;
 }
 
 ON_NurbsCurve ChiralityMath::UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)
