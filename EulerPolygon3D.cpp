@@ -88,7 +88,7 @@ EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_
 	}
 }
 
-void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
+void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 {
 	double a = 10.0;
 	double b = -0.5;
@@ -119,6 +119,30 @@ void EulerPolygon3D::EulerPolygonTest(ONX_Model *model)
 		ChiralityDebugInfo(onc, color_name[i] + " bezier_debug");
 		ChiralityDebugforR(onc, color_name[i] + " bezier_for_R");
 	}
+}
+
+void EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(ONX_Model *model)
+{
+	double R = 10.0;
+	double ratio = 0.03;
+	auto sphere_spiral = [R, ratio](double theta) -> ON_3dPoint
+	{
+		double phi = ratio * theta;
+		return ON_3dPoint(cos(theta) * cos(phi), cos(theta) * sin(phi), sin(theta)) * R;
+	};
+	auto sphere_spiral_tan = [ratio](double theta) -> ON_3dVector
+	{
+		double phi = ratio * theta;
+		return ON_3dVector(-sin(theta) * cos(phi), -sin(theta) * sin(phi), cos(theta));
+	};
+	double theta0 = 0.0;
+	double theta1 = 0.4 * PI;
+	EulerPolygon3D ep_bezier(sphere_spiral(theta0), sphere_spiral(theta1), sphere_spiral_tan(theta0), sphere_spiral_tan(theta1), EulerPolygon3D::CurveType::Bezier);
+	ON_NurbsCurve onc = ep_bezier.GetCurve();
+	const int layer_index = model->AddLayer(L"EulerPolygonTest_ForSphereSpiral", ON_Color::SaturatedBlue);
+	ChiralityAddNurbsCurve(model, onc, L"EulerPolygonTest_ForSphereSpiral", layer_index);
+	ChiralityDebugInfo(onc, "EulerPolygonTest_ForSphereSpiral bezier_debug");
+	ChiralityDebugforR(onc, "EulerPolygonTest_ForSphereSpiral bezier_for_R");
 }
 
 std::vector<double> EulerPolygon3D::ComputeDeltaTheta() const
@@ -233,6 +257,12 @@ void EulerPolygon3D::SmoothingToBezier()
 			double L = re.DistanceTo(p0);
 			double h = mDiscretePolygon[i + 1].z - mDiscretePolygon[i - 1].z;
 			double A = tan(new_angle_phi[i]);
+			if (abs(A) < 1e-8)
+			{
+				re.z = h / 2 + mDiscretePolygon[i - 1].z;
+				mDiscretePolygon[i] = re;
+				continue;
+			}
 			double DELTA = 4 * L * L + 4 * A * A * L * L + A * A * h * h;
 			double z1 = (2 * L + A * h + sqrt(DELTA)) / (2 * A);
 			double z2 = (2 * L + A * h - sqrt(DELTA)) / (2 * A);

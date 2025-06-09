@@ -27,7 +27,8 @@ public:
 public:
 	EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_3dVector ve, CurveType ct = Bezier);
 	ON_NurbsCurve GetCurve() const { return mCurve; }
-	static void EulerPolygonTest(ONX_Model *model);
+	static void EulerPolygonTest_ForConicSpiral(ONX_Model *model);
+	static void EulerPolygonTest_ForSphereSpiral(ONX_Model *model);
 
 private:
 	// 默认起点为原点，起始切向是(1,0,0)，PE位于xOy平面上

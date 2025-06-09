@@ -49,13 +49,14 @@ int main()
 	// EulerBezier2D::Pentagram(&model_to_write);
 	// Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
 	// EulerBspline2D::SmoothCornerTest(&model_to_write);
-	EulerPolygon3D::EulerPolygonTest(&model_to_write);
+	//EulerPolygon3D::EulerPolygonTest_ForConicSpiral(&model_to_write);
+	EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(&model_to_write);
 
 	ChiralityWrite3dmModel(&model_to_write, filename);
-	//ONX_Model model_to_read;
-	//Internal_SetExampleModelProperties(model_to_read, OPENNURBS__FUNCTION__, filename.c_str());
-	//ChiralityRead3dmModel(filename, &model_to_read);
-	//ChiralityModelDebugInfo(filename);
+	// ONX_Model model_to_read;
+	// Internal_SetExampleModelProperties(model_to_read, OPENNURBS__FUNCTION__, filename.c_str());
+	// ChiralityRead3dmModel(filename, &model_to_read);
+	// ChiralityModelDebugInfo(filename);
 	return 0;
 }
 
