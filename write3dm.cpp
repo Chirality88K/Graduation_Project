@@ -374,9 +374,9 @@ void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_wi
 			kappa = v1.x * v2.y - v1.y * v2.x;
 			kappa = kappa / pow(v1.Length(), 3);
 			ofs << std::fixed << std::setprecision(6) << t << "\t";
-			//ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
-			//ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
-			ofs << std::fixed << std::setprecision(6) << kappa;			
+			// ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
+			// ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
+			ofs << std::fixed << std::setprecision(6) << kappa;
 			ofs << std::endl;
 		}
 		ofs.close();
@@ -392,8 +392,8 @@ void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_wi
 			onc.Ev2Der(t, p, v1, v2);
 			kappa = onc.CurvatureAt(t).Length();
 			ofs << std::fixed << std::setprecision(6) << t << "\t";
-			//ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
-			//ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
+			// ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
+			// ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
 			ofs << std::fixed << std::setprecision(6) << kappa << "\t";
 			ofs << ChiralityMath::Torsion(onc, t);
 			ofs << std::endl;
@@ -404,6 +404,37 @@ void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_wi
 	}
 	ofs.close();
 	CHIRALITY_ERROR(filename + "Fail to write debug information!");
+}
+
+void ChiralityDebugforR(const std::vector<ON_NurbsCurve> &onc_list, const std::string &filename_without_extension)
+{
+	if (onc_list.empty())
+	{
+		return;
+	}
+
+	std::string filename = filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::ofstream ofs(filename);
+	double t = 0;
+	double kappa = 0;
+	double LastT = 0;
+	for (const ON_NurbsCurve &onc : onc_list)
+	{
+		double t0, t1;
+		onc_list[0].GetDomain(&t0, &t1);
+		for (int i = 0; i <= 200; i++)
+		{
+			t = (t1 - t0) / 200 * i + t0;
+			kappa = onc.CurvatureAt(t).Length();
+			ofs << std::fixed << std::setprecision(6) << t + LastT << "\t";
+			ofs << std::fixed << std::setprecision(6) << kappa << "\t";
+			ofs << ChiralityMath::Torsion(onc, t);
+			ofs << std::endl;
+		}
+		LastT += t1 - t0;
+	}
+	ofs.close();
+	CHIRALITY_INFO(filename + " 3-dimension nurbs curve debug written!");
 }
 
 void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const std::wstring &curve_name, int layer_index)

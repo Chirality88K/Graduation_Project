@@ -107,6 +107,7 @@ void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 	ON_Color color[7] = {ON_Color::SaturatedRed, ON_Color(255, 128, 0), ON_Color::SaturatedYellow,
 						 ON_Color::SaturatedGreen, ON_Color::SaturatedCyan, ON_Color::SaturatedBlue, ON_Color(76, 0, 153)};
 	std::string color_name[7] = {"Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"};
+	std::vector<ON_NurbsCurve> seven_oncs;
 	for (int i = 0; i < 7; ++i)
 	{
 		double t0 = 6.0 / 7.0 * i;
@@ -116,9 +117,10 @@ void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 		const int layer_index = model->AddLayer(conv.from_bytes(color_name[i]).c_str(), color[i]);
 		ChiralityAddNurbsCurve(model, onc, conv.from_bytes(color_name[i] + " bezier curve").c_str(), layer_index);
+		seven_oncs.push_back(onc);
 		ChiralityDebugInfo(onc, color_name[i] + " bezier_debug");
-		ChiralityDebugforR(onc, color_name[i] + " bezier_for_R");
 	}
+	ChiralityDebugforR(seven_oncs, "Seven Color bezier Debug For R");
 }
 
 void EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(ONX_Model *model)
@@ -143,6 +145,30 @@ void EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(ONX_Model *model)
 	ChiralityAddNurbsCurve(model, onc, L"EulerPolygonTest_ForSphereSpiral", layer_index);
 	ChiralityDebugInfo(onc, "EulerPolygonTest_ForSphereSpiral bezier_debug");
 	ChiralityDebugforR(onc, "EulerPolygonTest_ForSphereSpiral bezier_for_R");
+}
+
+void EulerPolygon3D::EulerPolygonTest_ForCircularHelix(ONX_Model *model)
+{
+	double a = 10.0;
+	double b = 2.0;
+	auto circular_helix = [a, b](double theta) -> ON_3dPoint
+	{
+		return ON_3dPoint(a * cos(theta), a * sin(theta), b * theta);
+	};
+	auto circular_helix_tan = [a, b](double theta) -> ON_3dVector
+	{
+		ON_3dVector v(-a * sin(theta), a * cos(theta), b);
+		v.Unitize();
+		return v;
+	};
+	double theta0 = 0.0;
+	double theta1 = PI * 0.8;
+	EulerPolygon3D ep_bezier(circular_helix(theta0), circular_helix(theta1), circular_helix_tan(theta0), circular_helix_tan(theta1), EulerPolygon3D::CurveType::Bezier);
+	ON_NurbsCurve onc = ep_bezier.GetCurve();
+	const int layer_index = model->AddLayer(L"EulerPolygonTest_ForCircularHelix", ON_Color::SaturatedBlue);
+	ChiralityAddNurbsCurve(model, onc, L"EulerPolygonTest_ForCircularHelix", layer_index);
+	ChiralityDebugInfo(onc, "EulerPolygonTest_ForCircularHelix bezier_debug");
+	ChiralityDebugforR(onc, "EulerPolygonTest_ForCircularHelix bezier_for_R");
 }
 
 std::vector<double> EulerPolygon3D::ComputeDeltaTheta() const
