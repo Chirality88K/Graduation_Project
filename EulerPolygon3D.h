@@ -32,7 +32,7 @@ public:
 	static void EulerPolygonTest_ForCircularHelix(ONX_Model *model);
 
 private:
-	// 默认起点为原点，起始切向是(1,0,0)，PE位于xOy平面上
+	// 默认起点为原点，起始切向是(1,0,0)，ve平行于xOy
 	void BuildUpToBezier(ON_3dPoint PE, ON_3dVector ve);
 	void BuildUpToB_Spline(ON_3dPoint PE, ON_3dVector ve);
 	// 计算相邻边的水平夹角，size为顶点数n，第一个和最后一个值都是0

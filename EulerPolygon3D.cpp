@@ -57,7 +57,7 @@ ON_3dPoint PolarPoint3d::CartesianCoordinates() const
 
 EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_3dVector ve, CurveType ct)
 {
-	ON_Plane old_plane(ON_3dPoint::Origin, vs, PE - PS);
+	ON_Plane old_plane(ON_3dPoint::Origin, vs, ve);
 	ON_Plane new_plane(ON_3dPoint::Origin, ON_3dVector::XAxis, ON_3dVector::YAxis);
 	ON_Xform rot;
 	rot.Rotation(old_plane, new_plane);
