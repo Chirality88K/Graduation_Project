@@ -275,26 +275,45 @@ void EulerPolygon3D::SmoothingToBezier()
 			new_angle_phi[i] = (new_angle_phi[i - 1] + new_angle_phi[i] + new_angle_phi[i + 1]) / 3;
 			ON_3dPoint p0 = mDiscretePolygon[i - 1];
 			ON_3dPoint pm = mDiscretePolygon[i + 1];
-			p0.z = 0;
-			pm.z = 0;
-			ON_3dPoint re = (pm - p0) / 2;
-			re.Set(-re.y, re.x, 0);
-			re = (p0 + pm) / 2 - re * tan(new_angle_theta[i] / 2);
-			double L = re.DistanceTo(p0);
-			double h = mDiscretePolygon[i + 1].z - mDiscretePolygon[i - 1].z;
-			double A = tan(new_angle_phi[i]);
-			if (abs(A) < 1e-8)
+			ON_3dPoint p0_pro(p0.x, p0.y, 0);
+			ON_3dPoint pm_pro(pm.x, pm.y, 0);
+			double R = p0_pro.DistanceTo(pm_pro) / (2 * sin(abs(new_angle_theta[i])));
+			ON_3dVector mid_normal = pm_pro - p0_pro;
+			mid_normal.Rotate(new_angle_theta[i] > 0 ? 1 : -1, 0, ON_3dVector::ZAxis);
+			mid_normal.Unitize();
+			ON_3dPoint center = (p0_pro + pm_pro) / 2 + mid_normal * sqrt(R * R - 0.25 * p0_pro.DistanceToSquared(pm_pro));
+			PolarPoint3d bound0(p0_pro - center);
+			double angle0 = bound0.mTheta;
+			PolarPoint3d boundm(pm_pro - center);
+			double anglem = boundm.mTheta;
+			if (abs(angle0 - anglem) > PI)
 			{
-				re.z = h / 2 + mDiscretePolygon[i - 1].z;
-				mDiscretePolygon[i] = re;
-				continue;
+				if (angle0 > anglem)
+				{
+					angle0 -= 2 * PI;
+				}
+				else
+				{
+					anglem -= 2 * PI;
+				}
 			}
-			double DELTA = 4 * L * L + 4 * A * A * L * L + A * A * h * h;
-			double z1 = (2 * L + A * h + sqrt(DELTA)) / (2 * A);
-			double z2 = (2 * L + A * h - sqrt(DELTA)) / (2 * A);
-			re.z = (abs(z1 - h / 2) > abs(z2 - h / 2)) ? z2 : z1;
-			re.z += mDiscretePolygon[i - 1].z;
-			mDiscretePolygon[i] = re;
+
+			double h = pm.z - p0.z;
+			auto function = [=](double x) -> double
+			{
+				ON_3dPoint p = center + R * ON_3dVector(cos(x), sin(x), 0);
+				double L0 = p.DistanceTo(p0_pro);
+				double L1 = p.DistanceTo(pm_pro);
+				return (0.5 * h * (L0 - L1) + 1 / (2 * h) * (L0 * L0 * L0 - L0 * L1 * L1 + L0 * L0 * L1 - L1 * L1 * L1) - (tan(new_angle_phi[i])) * (L0 * L1 + h * h * 0.25 - (L0 * L0 - L1 * L1) * (L0 * L0 - L1 * L1) / (4 * h * h)));
+			};
+
+			double result_x = ChiralityMath::Bisection(function, (std::min)(angle0, anglem), (std::max)(angle0, anglem));
+			ON_3dPoint p = center + R * ON_3dVector(cos(result_x), sin(result_x), 0);
+			double L0 = p.DistanceTo(p0_pro);
+			double L1 = p.DistanceTo(pm_pro);
+			double real_z = (L0 * L0 - L1 * L1) / (2 * (-h)) + (pm.z + p0.z) / 2;
+			mDiscretePolygon[i] = p;
+			mDiscretePolygon[i].z = real_z;
 		}
 		std::vector<double> Length = ComputeLength();
 		double sum = 0;
@@ -356,20 +375,45 @@ void EulerPolygon3D::SmoothingToB_Spline(ON_3dPoint PE, ON_3dVector ve)
 			new_angle_phi[i] = (new_angle_phi[i - 1] + new_angle_phi[i] + new_angle_phi[i + 1]) / 3;
 			ON_3dPoint p0 = mDiscretePolygon[i - 1];
 			ON_3dPoint pm = mDiscretePolygon[i + 1];
-			p0.z = 0;
-			pm.z = 0;
-			ON_3dPoint re = (pm - p0) / 2;
-			re.Set(-re.y, re.x, 0);
-			re = (p0 + pm) / 2 - re * tan(new_angle_theta[i] / 2);
-			double L = re.DistanceTo(p0);
-			double h = mDiscretePolygon[i + 1].z - mDiscretePolygon[i - 1].z;
-			double A = tan(new_angle_phi[i]);
-			double DELTA = 4 * L * L + 4 * A * A * L * L + A * A * h * h;
-			double z1 = (2 * L + A * h + sqrt(DELTA)) / (2 * A);
-			double z2 = (2 * L + A * h - sqrt(DELTA)) / (2 * A);
-			re.z = (abs(z1 - h / 2) > abs(z2 - h / 2)) ? z2 : z1;
-			re.z += mDiscretePolygon[i - 1].z;
-			mDiscretePolygon[i] = re;
+			ON_3dPoint p0_pro(p0.x, p0.y, 0);
+			ON_3dPoint pm_pro(pm.x, pm.y, 0);
+			double R = p0_pro.DistanceTo(pm_pro) / (2 * sin(abs(new_angle_theta[i])));
+			ON_3dVector mid_normal = pm_pro - p0_pro;
+			mid_normal.Rotate(new_angle_theta[i] > 0 ? 1 : -1, 0, ON_3dVector::ZAxis);
+			mid_normal.Unitize();
+			ON_3dPoint center = (p0_pro + pm_pro) / 2 + mid_normal * sqrt(R * R - 0.25 * p0_pro.DistanceToSquared(pm_pro));
+			PolarPoint3d bound0(p0_pro - center);
+			double angle0 = bound0.mTheta;
+			PolarPoint3d boundm(pm_pro - center);
+			double anglem = boundm.mTheta;
+			if (abs(angle0 - anglem) > PI)
+			{
+				if (angle0 > anglem)
+				{
+					angle0 -= 2 * PI;
+				}
+				else
+				{
+					anglem -= 2 * PI;
+				}
+			}
+
+			double h = pm.z - p0.z;
+			auto function = [=](double x) -> double
+			{
+				ON_3dPoint p = center + R * ON_3dVector(cos(x), sin(x), 0);
+				double L0 = p.DistanceTo(p0_pro);
+				double L1 = p.DistanceTo(pm_pro);
+				return (0.5 * h * (L0 - L1) + 1 / (2 * h) * (L0 * L0 * L0 - L0 * L1 * L1 + L0 * L0 * L1 - L1 * L1 * L1) - (tan(new_angle_phi[i])) * (L0 * L1 + h * h * 0.25 - (L0 * L0 - L1 * L1) * (L0 * L0 - L1 * L1) / (4 * h * h)));
+			};
+
+			double result_x = ChiralityMath::Bisection(function, (std::min)(angle0, anglem), (std::max)(angle0, anglem));
+			ON_3dPoint p = center + R * ON_3dVector(cos(result_x), sin(result_x), 0);
+			double L0 = p.DistanceTo(p0_pro);
+			double L1 = p.DistanceTo(pm_pro);
+			double real_z = (L0 * L0 - L1 * L1) / (2 * (-h)) + (pm.z + p0.z) / 2;
+			mDiscretePolygon[i] = p;
+			mDiscretePolygon[i].z = real_z;
 		}
 		std::vector<double> projectLength = ComputeProjectionLength();
 		double sum = 0;
