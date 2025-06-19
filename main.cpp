@@ -49,7 +49,7 @@ int main()
 	// EulerBezier2D::Pentagram(&model_to_write);
 	// Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
 	// EulerBspline2D::SmoothCornerTest(&model_to_write);
-	EulerPolygon3D::EulerPolygonTest_ForConicSpiral(&model_to_write, EulerPolygon3D::CurveType::B_spline);
+	EulerPolygon3D::EulerPolygonTest_ForConicSpiral(&model_to_write);
 	// EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(&model_to_write);
 	// EulerPolygon3D::EulerPolygonTest_ForCircularHelix(&model_to_write);
 

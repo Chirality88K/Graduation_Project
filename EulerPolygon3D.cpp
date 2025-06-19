@@ -88,7 +88,7 @@ EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_
 	}
 }
 
-void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model, CurveType ct)
+void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 {
 	double a = 10.0;
 	double b = -0.5;
@@ -112,15 +112,35 @@ void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model, CurveType
 	{
 		double t0 = 6.0 / 7.0 * i;
 		double t1 = t0 + 6.0 / 7.0;
-		EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), ct);
+		EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), CurveType::Bezier);
 		ON_NurbsCurve onc = ep_bezier.GetCurve();
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-		const int layer_index = model->AddLayer(conv.from_bytes(color_name[i]).c_str(), color[i]);
+		const int layer_index = model->AddLayer((std::wstring(L"bezier") + conv.from_bytes(color_name[i])).c_str(), color[i]);
 		ChiralityAddNurbsCurve(model, onc, conv.from_bytes(color_name[i] + " bezier curve").c_str(), layer_index);
 		seven_oncs.push_back(onc);
 		ChiralityDebugInfo(onc, color_name[i] + " bezier_debug");
 	}
 	ChiralityDebugforR(seven_oncs, "Seven Color bezier Debug For R");
+
+	seven_oncs.clear();
+	for (int i = 0; i < 7; ++i)
+	{
+		double t0 = 6.0 / 7.0 * i;
+		double t1 = t0 + 6.0 / 7.0;
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+		const int layer_index_init = model->AddLayer((std::wstring(L"b-spline_init") + conv.from_bytes(color_name[i])).c_str(), color[i]);
+		ChiralityAddNurbsCurve(model,
+			ChiralityMath::UniformG1(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1)),
+			(std::wstring(L"init b-spline") + conv.from_bytes(color_name[i])).c_str(), layer_index_init);
+		EulerPolygon3D ep_b_spline(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), CurveType::B_spline);
+		ON_NurbsCurve onc = ep_b_spline.GetCurve();
+		
+		const int layer_index = model->AddLayer((std::wstring(L"b-spline") + conv.from_bytes(color_name[i])).c_str(), color[i]);
+		ChiralityAddNurbsCurve(model, onc, conv.from_bytes(color_name[i] + " b-spline curve").c_str(), layer_index);
+		seven_oncs.push_back(onc);
+		ChiralityDebugInfo(onc, color_name[i] + " b-spline_debug");
+	}
+	ChiralityDebugforR(seven_oncs, "Seven Color b-spline Debug For R");
 }
 
 void EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(ONX_Model *model)
@@ -415,10 +435,10 @@ void EulerPolygon3D::SmoothingToB_Spline(ON_3dPoint PE, ON_3dVector ve)
 			mDiscretePolygon[i] = p;
 			mDiscretePolygon[i].z = real_z;
 		}
-		double lambda = ON_3dVector::DotProduct(vs, mDiscretePolygon[2] - ps);
+		double lambda = 2 * ON_3dVector::DotProduct(vs, mDiscretePolygon[2] - ps);
 		mDiscretePolygon[0] = mDiscretePolygon[2] - lambda * vs;
 		mDiscretePolygon[1] = (6 * ps - mDiscretePolygon[2] - mDiscretePolygon[0]) / 4;
-		lambda = -ON_3dVector::DotProduct(ve, mDiscretePolygon[num_v - 3] - pe);
+		lambda = -2 * ON_3dVector::DotProduct(ve, mDiscretePolygon[num_v - 3] - pe);
 		mDiscretePolygon[num_v - 1] = mDiscretePolygon[num_v - 3] + lambda * ve;
 		mDiscretePolygon[num_v - 2] = (6 * pe - mDiscretePolygon[num_v - 3] - mDiscretePolygon[num_v - 1]) / 4;
 		thetaDD = 0;
@@ -455,7 +475,7 @@ void EulerPolygon3D::BuildUpToBezier(ON_3dPoint PE, ON_3dVector ve)
 	mDiscretePolygon[3] = PE;
 	SmoothingToBezier();
 	// 迭代
-	for (int i = 0; i < ITERATIONTIMES; ++i)
+	for (int i = 0; i < ITERATIONTIMES_BEZIER; ++i)
 	{
 		Elevate();
 		SmoothingToBezier();
@@ -483,7 +503,7 @@ void EulerPolygon3D::BuildUpToB_Spline(ON_3dPoint PE, ON_3dVector ve)
 	}
 	SmoothingToB_Spline(PE, ve);
 	// 迭代
-	for (int i = 0; i < ITERATIONTIMES; ++i)
+	for (int i = 0; i < ITERATIONTIMES_BSPLINE; ++i)
 	{
 		Elevate();
 		SmoothingToB_Spline(PE, ve);

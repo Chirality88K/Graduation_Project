@@ -13,7 +13,8 @@ public:
 	double mPhi;	  // 俯仰角[-\pi/2,\pi/2]
 };
 
-const int ITERATIONTIMES = 20;
+const int ITERATIONTIMES_BEZIER = 15;
+const int ITERATIONTIMES_BSPLINE = 15;
 
 class EulerPolygon3D
 {
@@ -27,7 +28,7 @@ public:
 public:
 	EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_3dVector ve, CurveType ct = Bezier);
 	ON_NurbsCurve GetCurve() const { return mCurve; }
-	static void EulerPolygonTest_ForConicSpiral(ONX_Model *model, CurveType ct = Bezier);
+	static void EulerPolygonTest_ForConicSpiral(ONX_Model *model);
 	static void EulerPolygonTest_ForSphereSpiral(ONX_Model *model);
 	static void EulerPolygonTest_ForCircularHelix(ONX_Model *model);
 
