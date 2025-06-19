@@ -88,7 +88,7 @@ EulerPolygon3D::EulerPolygon3D(ON_3dPoint PS, ON_3dPoint PE, ON_3dVector vs, ON_
 	}
 }
 
-void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
+void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model, CurveType ct)
 {
 	double a = 10.0;
 	double b = -0.5;
@@ -112,7 +112,7 @@ void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 	{
 		double t0 = 6.0 / 7.0 * i;
 		double t1 = t0 + 6.0 / 7.0;
-		EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), EulerPolygon3D::CurveType::Bezier);
+		EulerPolygon3D ep_bezier(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), ct);
 		ON_NurbsCurve onc = ep_bezier.GetCurve();
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 		const int layer_index = model->AddLayer(conv.from_bytes(color_name[i]).c_str(), color[i]);
@@ -415,25 +415,12 @@ void EulerPolygon3D::SmoothingToB_Spline(ON_3dPoint PE, ON_3dVector ve)
 			mDiscretePolygon[i] = p;
 			mDiscretePolygon[i].z = real_z;
 		}
-		std::vector<double> projectLength = ComputeProjectionLength();
-		double sum = 0;
-		for (int i = 0; i < num_v - 1; i++)
-		{
-			sum = sum + projectLength[i];
-		}
-		lengthavg = sum / (num_v - 1);
-		double theta1 = 2 * new_angle_theta[2] - new_angle_theta[3];
-		mDiscretePolygon[0] = mDiscretePolygon[2] - vs * (2 * lengthavg * cos(theta1 / 2));
-		mDiscretePolygon[0].z = mDiscretePolygon[2].z - (vs.z / sqrt(vs.x * vs.x + vs.y * vs.y)) *
-															sqrt(pow(mDiscretePolygon[2].x - mDiscretePolygon[0].x, 2) + pow(mDiscretePolygon[2].y - mDiscretePolygon[0].y, 2));
-		mDiscretePolygon[1] = (6 * ps - mDiscretePolygon[0] - mDiscretePolygon[2]) / 4;
-
-		double thetan_1 = 2 * new_angle_theta[num_v - 3] - new_angle_theta[num_v - 4];
-		mDiscretePolygon[num_v - 1] = mDiscretePolygon[num_v - 3] + ve * (2 * lengthavg * cos(thetan_1 / 2));
-		mDiscretePolygon[num_v - 1].z = mDiscretePolygon[num_v - 3].z + (ve.z / sqrt(ve.x * ve.x + ve.y * ve.y)) *
-																			sqrt(pow(mDiscretePolygon[num_v - 3].x - mDiscretePolygon[num_v - 1].x, 2) + pow(mDiscretePolygon[num_v - 3].y - mDiscretePolygon[num_v - 1].y, 2));
-		mDiscretePolygon[num_v - 2] = (6 * pe - mDiscretePolygon[num_v - 1] - mDiscretePolygon[num_v - 3]) / 4;
-
+		double lambda = ON_3dVector::DotProduct(vs, mDiscretePolygon[2] - ps);
+		mDiscretePolygon[0] = mDiscretePolygon[2] - lambda * vs;
+		mDiscretePolygon[1] = (6 * ps - mDiscretePolygon[2] - mDiscretePolygon[0]) / 4;
+		lambda = -ON_3dVector::DotProduct(ve, mDiscretePolygon[num_v - 3] - pe);
+		mDiscretePolygon[num_v - 1] = mDiscretePolygon[num_v - 3] + lambda * ve;
+		mDiscretePolygon[num_v - 2] = (6 * pe - mDiscretePolygon[num_v - 3] - mDiscretePolygon[num_v - 1]) / 4;
 		thetaDD = 0;
 		Angle_Theta = ComputeDeltaTheta();
 		Angle_Phi = ComputeDeltaPhi();
@@ -446,7 +433,7 @@ void EulerPolygon3D::SmoothingToB_Spline(ON_3dPoint PE, ON_3dVector ve)
 			thetaDD = (std::max)(thetaDD, abs(Angle_Phi[i] * 2 - Angle_Phi[i - 1] - Angle_Phi[i + 1]));
 		}
 		std::vector<double> Length = ComputeLength();
-		sum = 0;
+		double sum = 0;
 		for (int i = 0; i < num_v - 1; i++)
 		{
 			sum = sum + Length[i];
