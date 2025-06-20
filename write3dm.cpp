@@ -463,3 +463,17 @@ void ChiralityAddPlane(ONX_Model *model, const ON_PlaneSurface &p, const std::ws
 	ON_PlaneSurface *ops = new ON_PlaneSurface(p);
 	model->AddManagedModelGeometryComponent(ops, att);
 }
+
+void ChiralityAddLines(ONX_Model *model, const std::vector<ON_3dPoint> &vp, const std::wstring &lines_name, int layer_index)
+{
+	ON_3dPointArray parray;
+	for (ON_3dPoint p : vp)
+	{
+		parray.Append(p);
+	}
+	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();
+	att->m_layer_index = layer_index;
+	att->m_name = lines_name.c_str();
+	ON_PolylineCurve *opc = new ON_PolylineCurve(ON_Polyline(parray));
+	model->AddManagedModelGeometryComponent(opc, att);
+}

@@ -31,4 +31,5 @@ void ChiralityAddNurbsCurve(ONX_Model *model, const ON_NurbsCurve &onc, const st
 void ChiralityAddNurbsSurface(ONX_Model *model, const ON_NurbsSurface &ons, const std::wstring &surface_name, int layer_index);
 // 该函数内会自动使用new为Plane分配内存
 void ChiralityAddPlane(ONX_Model *model, const ON_PlaneSurface &p, const std::wstring &plane_name, int layer_index);
+void ChiralityAddLines(ONX_Model *model, const std::vector<ON_3dPoint> &vp, const std::wstring &lines_name, int layer_index);
 #endif

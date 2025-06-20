@@ -130,11 +130,11 @@ void EulerPolygon3D::EulerPolygonTest_ForConicSpiral(ONX_Model *model)
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 		const int layer_index_init = model->AddLayer((std::wstring(L"b-spline_init") + conv.from_bytes(color_name[i])).c_str(), color[i]);
 		ChiralityAddNurbsCurve(model,
-			ChiralityMath::UniformG1(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1)),
-			(std::wstring(L"init b-spline") + conv.from_bytes(color_name[i])).c_str(), layer_index_init);
+							   ChiralityMath::UniformG1(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1)),
+							   (std::wstring(L"init b-spline") + conv.from_bytes(color_name[i])).c_str(), layer_index_init);
 		EulerPolygon3D ep_b_spline(spiral(t0), spiral(t1), spiral_tan(t0), spiral_tan(t1), CurveType::B_spline);
 		ON_NurbsCurve onc = ep_b_spline.GetCurve();
-		
+
 		const int layer_index = model->AddLayer((std::wstring(L"b-spline") + conv.from_bytes(color_name[i])).c_str(), color[i]);
 		ChiralityAddNurbsCurve(model, onc, conv.from_bytes(color_name[i] + " b-spline curve").c_str(), layer_index);
 		seven_oncs.push_back(onc);
@@ -189,6 +189,39 @@ void EulerPolygon3D::EulerPolygonTest_ForCircularHelix(ONX_Model *model)
 	ChiralityAddNurbsCurve(model, onc, L"EulerPolygonTest_ForCircularHelix", layer_index);
 	ChiralityDebugInfo(onc, "EulerPolygonTest_ForCircularHelix bezier_debug");
 	ChiralityDebugforR(onc, "EulerPolygonTest_ForCircularHelix bezier_for_R");
+}
+
+void EulerPolygon3D::EulerPolygonExplainTest(ONX_Model *model)
+{
+	double model_size = 3.0;
+	std::vector<ON_3dPoint> vp;
+	vp.push_back(ON_3dPoint::Origin);
+	vp.push_back(ON_3dPoint(1, 0, 0) * model_size);
+	double delta_theta = 0.01;
+	double theta0 = 0.1;
+	double delta_phi = 0.001;
+	double phi0 = 0.01;
+	for (int i = 2; i < 20; ++i)
+	{
+		ON_3dVector v = vp[i - 1] - vp[i - 2];
+		PolarPoint3d polar_v(ON_3dPoint(v.x, v.y, v.z));
+		polar_v.mTheta += theta0 + (i - 2) * delta_theta;
+		polar_v.mPhi += phi0 + (i - 2) * delta_phi;
+		ON_3dPoint transtop = polar_v.CartesianCoordinates();
+		vp.push_back(vp[i - 1] + transtop);
+	}
+	const int lines_layer_index = model->AddLayer(L"lines_layer", ON_Color::Black);
+	ChiralityAddLines(model, vp, L"example control points", lines_layer_index);
+	ON_BezierCurve obc;
+	obc.Create(3, false, vp.size());
+	for (int i = 0; i < obc.CVCount(); ++i)
+	{
+		obc.SetCV(i, vp[i]);
+	}
+	const int bezier_layer_index = model->AddLayer(L"bezier_layer", ON_Color::SaturatedRed);
+	ChiralityAddNurbsCurve(model, obc, L"example bezier", bezier_layer_index);
+	ChiralityDebugInfo(obc, "example_bezier");
+	ChiralityDebugforR(obc, "example_bezier_for_R");
 }
 
 std::vector<double> EulerPolygon3D::ComputeDeltaTheta() const

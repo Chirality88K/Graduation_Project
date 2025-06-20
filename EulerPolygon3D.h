@@ -31,6 +31,7 @@ public:
 	static void EulerPolygonTest_ForConicSpiral(ONX_Model *model);
 	static void EulerPolygonTest_ForSphereSpiral(ONX_Model *model);
 	static void EulerPolygonTest_ForCircularHelix(ONX_Model *model);
+	static void EulerPolygonExplainTest(ONX_Model *model);
 
 private:
 	// 默认起点为原点，起始切向是(1,0,0)，ve平行于xOy
