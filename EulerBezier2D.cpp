@@ -101,6 +101,52 @@ namespace EulerBezier2D
 		}
 	}
 
+	bool EulerBezierWeakCheck(const ON_BezierCurve* OBC)
+	{
+		int n = OBC->CVCount();
+		int m = n - 1;
+		if (n < 2)
+		{
+			return false;
+		}
+		std::vector<double> Length = ComputeLength(OBC);
+		double sum = 0;
+		for (int i = 0; i < m; i++)
+		{
+			sum = sum + Length[i];
+		}
+		double avg = sum / m;
+		sum = 0;
+		for (int i = 0; i < m; i++)
+		{
+			sum = sum + (Length[i] - avg) * (Length[i] - avg);
+		}
+		double s2 = sqrt(sum / m) / avg;
+		if (s2 > 0.1)
+		{
+			return false;
+		}
+		std::vector<double> Angle = ComputeAngle(OBC);
+		for (int i = 0; i < n; i++)
+		{
+			if (Angle[i] > PI / 2 || Angle[i] < -PI / 2)
+			{
+				return false;
+			}
+		}
+		if (m > 3)
+		{
+			for (int i = 2; i < m - 1; i++)
+			{
+				if (abs(Angle[i] * 2 - Angle[i - 1] - Angle[i + 1]) > 1e-6)
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	void SmoothingBezierControlPolygon(ON_BezierCurve *OBC)
 	{
 		int m = OBC->CVCount() - 1;
@@ -205,6 +251,15 @@ namespace EulerBezier2D
 	void EulerBezierSpiralInterpolation(ON_BezierCurve *OBC, int max_vtx_num)
 	{
 		while (OBC->CVCount() < max_vtx_num && !EulerBezierSpiralCheck(OBC))
+		{
+			Elevate(OBC);
+			SmoothingBezierControlPolygon(OBC);
+		}
+	}
+
+	void EulerBezierWeakInterpolation(ON_BezierCurve* OBC, int max_vtx_num)
+	{
+		while (OBC->CVCount() < max_vtx_num && !EulerBezierWeakCheck(OBC))
 		{
 			Elevate(OBC);
 			SmoothingBezierControlPolygon(OBC);

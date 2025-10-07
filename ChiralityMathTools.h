@@ -3,6 +3,8 @@
 #include "thirdparty/opennurbs/opennurbs.h"
 #include <vector>
 #include <functional>
+#include "Frenet.h"
+
 namespace ChiralityMath
 {
 	// 二分法求函数零点，要求初始左右点函数值异号
@@ -15,12 +17,28 @@ namespace ChiralityMath
 	std::vector<double> GenerateUniformArcLength(const ON_NurbsCurve &onc, int num_param);
 	double Bernstein(int n, int i, double t);
 	double Torsion(const ON_NurbsCurve &, double t);
+	double DiscreteCurvature(ON_3dPoint p_before, ON_3dPoint p_mid, ON_3dPoint p_after);
 	ON_NurbsCurve UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve);
+	ON_BezierCurve BezierG1_xOy(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve);
 	void Elevate(ON_NurbsCurve &onc);
+	void Elevate(ON_BezierCurve& obc);
 	ON_NurbsCurve CubicBsplineInterpolate_G1(const std::vector<ON_3dPoint> &Q, const std::vector<double> &knot, ON_3dVector v0, ON_3dVector vn);
 	ON_NurbsSurface Skinning(const std::vector<ON_NurbsCurve> &curve_list, const std::vector<double> &u_knots, const std::vector<std::pair<ON_3dVector, ON_3dVector>> &pair_tangent);
 	// 生成柱面，输入xy平面上的母线，沿着方向dir生成柱面，dir方向上的范围是t0到t1
 	ON_NurbsSurface GenerateCylinder(const ON_NurbsCurve &parent_curve, ON_3dVector dir, double t0, double t1);
+	FrenetFrame GetFrenet(const ON_NurbsCurve& onc, double t);
+	FrenetFrame GetFrenet(const ON_NurbsSurface& ons, double u, double v);
+
+	ON_NurbsSurface GenerateRotating(const ON_NurbsCurve& parent_curve, const ON_Line& axis);
 	ON_NurbsCurve ChangeDimensionFrom2To3(const ON_NurbsCurve &onc_2d);
+	//生成随机点，距离p在min_distance和max_distance之间
+	ON_3dPoint GetRandomPoint(const ON_3dPoint& p, double min_distance, double max_distance);
+
+
+	// 求解二阶微分方程组的边值问题，X0和XN为起点终点的Frenet标架，Length为弧长s，
+	// kappa_tau_param为四个double参数，a,b,c,d，
+	// 分别为k(s) = as+b;\tau(s) = cs+d,
+	// n为采样数
+	std::vector <ON_3dPoint> SolveBoundary(FrenetFrame X0, FrenetFrame XN, double step_length, double* kappa_tau_param,int n);
 };
 #endif

@@ -36,6 +36,7 @@ public:
 		return mAlpha.IsUnitVector() && mBeta.IsUnitVector() && mGamma.IsUnitVector() && mAlpha.IsPerpendicularTo(mBeta) &&
 			   ((ON_3dVector::CrossProduct(mAlpha, mBeta) - mGamma).Length() < 1e-8);
 	}
+	ON_3dPoint GetPos()const { return mOrigin; }
 	ON_3dVector GetAlpha() const { return mAlpha; }
 	ON_3dVector GetBeta() const { return mBeta; }
 	ON_3dVector GetGamma() const { return mGamma; }

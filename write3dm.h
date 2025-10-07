@@ -6,6 +6,7 @@
 #include <string>
 
 void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename);
+std::wstring StringToWString(const std::string &s);
 std::string ChiralityPrintNowTime();
 ON_3dmObjectAttributes *Internal_CreateManagedAttributes(int layer_index, const wchar_t *name);
 #define INTERNAL_INITIALIZE_MODEL(model) Internal_SetExampleModelProperties(model, OPENNURBS__FUNCTION__, __FILE__)
@@ -21,6 +22,7 @@ bool Internal_WriteExampleModel(
 
 void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_without_extension = "BezierCurveCurvature");
 void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "NurbsCurveCurvature");
+void PrintDiscreteCurvature(const std::vector<ON_3dPoint> &vp, const std::string &filename_without_extension = "DiscreteCurvature");
 void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Pos&Tan");
 void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Bspline Debug");
 void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_without_extension = "Debug_for_R");
@@ -32,4 +34,7 @@ void ChiralityAddNurbsSurface(ONX_Model *model, const ON_NurbsSurface &ons, cons
 // 该函数内会自动使用new为Plane分配内存
 void ChiralityAddPlane(ONX_Model *model, const ON_PlaneSurface &p, const std::wstring &plane_name, int layer_index);
 void ChiralityAddLines(ONX_Model *model, const std::vector<ON_3dPoint> &vp, const std::wstring &lines_name, int layer_index);
+void ChiralityAddCylindricalHelix(ONX_Model* model, double R, double ratio, double begin, double end, const std::wstring& name, int layer_index);
+std::string doubleToScientificString(double value);
+void ChiralityDrawDNA(ONX_Model* model);
 #endif

@@ -19,6 +19,10 @@
 #include "write3dm.h"
 #include "Fillet_using_EB3d.h"
 #include "EulerPolygon3D.h"
+#include "DiscreteSpiral.h"
+#include <filesystem>
+#include "FixAxisBezier3D.h"
+
 const double PI = acos(-1.0);
 
 using namespace std;
@@ -28,10 +32,14 @@ void Add_Circle(ONX_Model *model, const wchar_t *name, double radius = 1, ON_Col
 void Add_Ball(ONX_Model *model, const wchar_t *name, double radius = 1, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
 void Add_BezierCurve(ONX_Model *model, const wchar_t *name, const ON_BezierCurve *bc, ON_Color color = ON_Color::Black, ON_Xform xform = ON_Xform::IdentityTransformation);
 void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string filename);
+void Explicit_Conic_Spiral();
+std::string gTableFolder;
 
 // int main ( int argc, const char* argv[] )
 int main()
 {
+	gTableFolder = "./Table/" + ChiralityPrintNowTime() + "/";
+	std::filesystem::create_directory(gTableFolder);
 	const std::string filename = "EulerPolygonTest-" + ChiralityPrintNowTime() + ".3dm";
 	ON::Begin();
 	ONX_Model model_to_write;
@@ -45,14 +53,22 @@ int main()
 	//  EulerBezier3D::EulerBezier3DTest(&model_to_write);
 	// EulerBezier3D::EulerBezier3DTest_MidPlaneMethod(&model_to_write);
 	// EulerBspline3D::EulerBspline3DTest_MidPlaneMethod(&model_to_write);
-	// Fillet_EB3D::Fillet_EB3D_Test(&model_to_write);
+	 //Fillet_EB3D::Fillet_EB3D_Test(&model_to_write);
 	// EulerBezier2D::Pentagram(&model_to_write);
-	// Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
+	 //Fillet_EB3D::TwoSurfaces_Fillet_Test(&model_to_write);
 	// EulerBspline2D::SmoothCornerTest(&model_to_write);
 	// EulerPolygon3D::EulerPolygonTest_ForConicSpiral(&model_to_write);
 	// EulerPolygon3D::EulerPolygonTest_ForSphereSpiral(&model_to_write);
 	// EulerPolygon3D::EulerPolygonTest_ForCircularHelix(&model_to_write);
-	EulerPolygon3D::EulerPolygonExplainTest(&model_to_write);
+	// EulerPolygon3D::EulerPolygonExplainTest(&model_to_write);
+	 //DiscreteSpiral::DiscreteSpiralTest(&model_to_write);
+	 //DiscreteSpiral::DiscreteBodyTest(&model_to_write);
+	//SolveBoundaryTest(&model_to_write);
+	//DiscreteSpiral::TestExit(&model_to_write);
+	//FixAxisBezier3D::Test(&model_to_write);
+	//FixAxisBezier3D::GenerateDNA(&model_to_write);
+	//Fillet_EB3D::CircleSpiral_Test(&model_to_write);
+	Fillet_EB3D::ThreeAngle_Test(&model_to_write);
 
 	ChiralityWrite3dmModel(&model_to_write, filename);
 	// ONX_Model model_to_read;
@@ -290,4 +306,47 @@ void Get_Curvature_and_Torsion_of_NurbsCurve(const ON_NurbsCurve &onc, string fi
 		ofs << t << " " << kappa << endl;
 	}
 	ofs.close();
+}
+
+void Explicit_Conic_Spiral()
+{
+	double a = 10.0;
+	double b = -0.5;
+	double alpha = PI / 3;
+	auto spiral_frenet = [a, b, alpha](double theta) -> FrenetFrame
+	{
+		ON_3dPoint p = ON_3dPoint(sin(alpha) * cos(theta), sin(alpha) * sin(theta), cos(alpha)) * a * exp(b * theta);
+		ON_3dVector der = ON_3dVector(b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), b * sin(alpha) * sin(theta) + sin(alpha) * cos(theta), b * cos(alpha));
+		der.Unitize();
+		ON_3dVector derder = (a * b * exp(b * theta)) * ON_3dVector(b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), b * sin(alpha) * sin(theta) + sin(alpha) * cos(theta), b * cos(alpha)) + (a * exp(b * theta)) * ON_3dVector(-b * sin(alpha) * sin(theta) - sin(alpha) * cos(theta),
+																																																									   b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), 0);
+		ON_3dVector N = ON_3dVector::CrossProduct(der, derder);
+		ON_3dVector B = ON_3dVector::CrossProduct(N, der);
+		B.Unitize();
+		return FrenetFrame(p, der, B);
+	};
+	std::ofstream ofs("Explicit_Conic_Spiral.txt");
+	ON_3dVector last_a;
+	ON_3dVector last_r;
+	for (int i = 0; i < 101; ++i)
+	{
+		double theta = PI * double(i) / double(100);
+		ofs << theta << "\t";
+		FrenetFrame f = spiral_frenet(theta);
+		ON_3dVector a = f.GetAlpha();
+		ON_3dVector r = f.GetGamma();
+		ofs << "alpha = (" << a.x << "," << a.y << "," << a.z << ")\t";
+		if (i > 0)
+		{
+			ofs << "alpha_angle = " << acos(ON_3dVector::DotProduct(last_a, a)) << "\t";
+		}
+		ofs << "gamma = (" << r.x << "," << r.y << "," << r.z << ")\t";
+		if (i > 0)
+		{
+			ofs << "gamma_angle = " << acos(ON_3dVector::DotProduct(last_r, r)) << "\t";
+		}
+		ofs << "\n";
+		last_a = a;
+		last_r = r;
+	}
 }

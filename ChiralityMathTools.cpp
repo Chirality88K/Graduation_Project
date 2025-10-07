@@ -1,6 +1,8 @@
 #include "ChiralityMathTools.h"
 #include "thirdparty/eigen/Eigen/Dense"
 #include <assert.h>
+#include <random>
+extern const double PI;
 
 double ChiralityMath::Bisection(const std::function<double(double)> &F, double L, double R, double eps)
 {
@@ -119,8 +121,21 @@ double ChiralityMath::Torsion(const ON_NurbsCurve &onc, double t)
 	ON_3dVector second_der(result[6], result[7], result[8]);
 	ON_3dVector third_der(result[9], result[10], result[11]);
 	ON_3dVector cross_vector = ON_3dVector::CrossProduct(first_der, second_der);
+	if (cross_vector.Length() < 1e-6) {
+		return 0.0;
+	}
 	double torsion = ON_3dVector::DotProduct(cross_vector, third_der) / cross_vector.LengthSquared();
 	return torsion;
+}
+
+double ChiralityMath::DiscreteCurvature(ON_3dPoint p_before, ON_3dPoint p_mid, ON_3dPoint p_after)
+{
+	double l1 = p_before.DistanceTo(p_mid);
+	double l2 = p_mid.DistanceTo(p_after);
+	double l3 = p_before.DistanceTo(p_after);
+	assert(l1 * l2 * l3 > 1e-6);
+	double A = ON_3dVector::CrossProduct(p_mid - p_before, p_after - p_mid).Length();
+	return 2 * A / (l1 * l2 * l3);
 }
 
 ON_NurbsCurve ChiralityMath::UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)
@@ -173,6 +188,19 @@ ON_NurbsCurve ChiralityMath::UniformG1(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector
 	return onc;
 }
 
+ON_BezierCurve ChiralityMath::BezierG1_xOy(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)
+{
+	vs.Unitize();
+	ve.Unitize();
+	ON_BezierCurve obc(2, false, 4);
+	obc.SetCV(0, ps);
+	obc.SetCV(3, pe);
+	double L = ps.DistanceTo(pe);
+	obc.SetCV(1, ps + vs * L / 4);
+	obc.SetCV(2, pe - ve * L / 4);
+	return obc;
+}
+
 void ChiralityMath::Elevate(ON_NurbsCurve &onc)
 {
 	int v_num = onc.CVCount();
@@ -200,6 +228,32 @@ void ChiralityMath::Elevate(ON_NurbsCurve &onc)
 	{
 		onc.SetCV(i, it);
 		i++;
+	}
+}
+
+void ChiralityMath::Elevate(ON_BezierCurve& obc)
+{
+	int n = obc.CVCount();
+	if (n < 2)
+	{
+		return;
+	}
+	std::vector<ON_3dPoint> parr;
+	ON_3dPoint p, q;
+	obc.GetCV(0, p);
+	parr.push_back(p);
+	for (int i = 1; i < n; i++)
+	{
+		obc.GetCV(i - 1, p);
+		obc.GetCV(i, q);
+		parr.push_back(p * (i * 1.0 / n) + q * (1 - i * 1.0 / n));
+	}
+	obc.GetCV(n - 1, q);
+	parr.push_back(q);
+	obc.Create(3, false, n + 1);
+	for (int i = 0; i < n + 1; i++)
+	{
+		obc.SetCV(i, parr[i]);
 	}
 }
 
@@ -329,6 +383,83 @@ ON_NurbsSurface ChiralityMath::GenerateCylinder(const ON_NurbsCurve &parent_curv
 	return ons;
 }
 
+FrenetFrame ChiralityMath::GetFrenet(const ON_NurbsCurve& onc, double t)
+{
+	ON_3dPoint p;
+	ON_3dVector der;
+	ON_3dVector derder;
+	onc.Ev2Der(t, p, der, derder);
+	der.Unitize();
+	ON_3dVector N = ON_3dVector::CrossProduct(der, derder);
+	ON_3dVector B = ON_3dVector::CrossProduct(N, der);
+	B.Unitize();
+	return FrenetFrame(p, der, B);
+}
+
+FrenetFrame ChiralityMath::GetFrenet(const ON_NurbsSurface& ons, double u, double v)
+{
+	ON_3dPoint p;
+	ON_3dVector der_u;
+	ON_3dVector der_v;
+	ons.Ev1Der(u, v, p, der_u, der_v);
+	return FrenetFrame(p, der_u, der_v);
+}
+
+static ON_3dPoint ComputePedal(const ON_Line& line, const ON_3dPoint& p)
+{
+	ON_3dVector dir = line.Direction();
+	dir.Unitize();
+	ON_3dPoint o = line.from;
+	double t = ON_3dVector::DotProduct(dir, p - o);
+	return o + t * dir;
+}
+
+ON_NurbsSurface ChiralityMath::GenerateRotating(const ON_NurbsCurve& parent_curve, const ON_Line& axis)
+{
+	ON_NurbsSurface ons(3, true, parent_curve.Order(), 3, parent_curve.CVCount(), 7);
+	ON_3dVector Z = axis.Direction();
+	Z.Unitize();
+	for (int i = 0; i < ons.KnotCount(0); ++i)
+	{
+		ons.SetKnot(0, i, parent_curve.Knot(i));
+	}
+	double w[8] = { 0,0,0.25,0.5,0.5,0.75,1,1 };
+	for (int j = 0; j < 8; ++j)
+	{
+		ons.SetKnot(1, j, w[j]);
+	}
+	for (int i = 0; i < parent_curve.CVCount(); ++i)
+	{
+		ON_3dPoint p;
+		parent_curve.GetCV(i, p);
+		ON_3dPoint O = ComputePedal(axis, p);
+		ON_3dVector X = p - O;
+		ON_3dVector Y = X;
+		Y.Rotate(1, 0, Z);
+		double weight[7];
+		for (int j = 0; j < 7; ++j)
+		{
+			weight[j] = parent_curve.Weight(i);
+			if (j % 3 != 0)
+			{
+				weight[j] *= 0.5;
+			}
+		}
+		ons.SetCV(i, 0, p*weight[0]);
+		ons.SetCV(i, 1, (p + Y) * weight[1]);
+		ons.SetCV(i, 2, (p + Y - 2 * X) * weight[2]);
+		ons.SetCV(i, 3, (p - 2 * X) * weight[3]);
+		ons.SetCV(i, 4, (p - Y - 2 * X) * weight[4]);
+		ons.SetCV(i, 5, (p - Y) * weight[5]);
+		ons.SetCV(i, 6, p * weight[6]);
+		for (int j = 0; j < 7; ++j)
+		{
+			ons.SetWeight(i, j, weight[j]);
+		}
+	}
+	return ons;
+}
+
 ON_NurbsCurve ChiralityMath::ChangeDimensionFrom2To3(const ON_NurbsCurve &onc_2d)
 {
 	ON_NurbsCurve onc_3d(3, onc_2d.IsRational(), onc_2d.Order(), onc_2d.CVCount());
@@ -350,4 +481,84 @@ ON_NurbsCurve ChiralityMath::ChangeDimensionFrom2To3(const ON_NurbsCurve &onc_2d
 		}
 	}
 	return onc_3d;
+}
+
+ON_3dPoint ChiralityMath::GetRandomPoint(const ON_3dPoint& p, double min_distance, double max_distance)
+{
+	assert(min_distance > 0 && min_distance <= max_distance);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<double> dis(0.0, 1.0);
+	double rand_double[3];
+	for (int i = 0; i < 3; ++i)
+	{
+		rand_double[i] = dis(gen);
+	}
+	double rand_distance = rand_double[0] * max_distance + (1 - rand_double[0]) * min_distance;
+	double rand_theta = rand_double[1] * 2 * PI;
+	double rand_phi = rand_double[2] * (PI / 2) + (1 - rand_double[2]) * (-PI / 2);
+	return p + ON_3dVector(cos(rand_theta) * cos(rand_phi),
+		sin(rand_theta) * cos(rand_phi), sin(rand_phi)) * rand_distance;
+}
+
+std::vector<ON_3dPoint> ChiralityMath::SolveBoundary(FrenetFrame X0, FrenetFrame XN, double step_length, double* kappa_tau_param, int n)
+{
+	const Eigen::Matrix4d Identity = Eigen::Matrix4d::Identity();
+	const int dim = 4 * (n + 1);
+	Eigen::MatrixXd Left = Eigen::MatrixXd::Zero(dim, dim);
+	Eigen::MatrixXd Right = Eigen::MatrixXd::Zero(dim, 3);
+	Eigen::Matrix<double,4,3> M_X_0;
+	M_X_0 << X0.GetPos().x, X0.GetPos().y, X0.GetPos().z,
+		X0.GetAlpha().x, X0.GetAlpha().y, X0.GetAlpha().z,
+		X0.GetBeta().x, X0.GetBeta().y, X0.GetBeta().z,
+		X0.GetGamma().x, X0.GetGamma().y, X0.GetGamma().z;
+
+	Eigen::Matrix<double, 4, 3> M_X_N;
+	M_X_N << XN.GetPos().x, XN.GetPos().y, XN.GetPos().z,
+		XN.GetAlpha().x, XN.GetAlpha().y, XN.GetAlpha().z,
+		XN.GetBeta().x, XN.GetBeta().y, XN.GetBeta().z,
+		XN.GetGamma().x, XN.GetGamma().y, XN.GetGamma().z;
+
+	Right.block<4, 3>(0, 0) = M_X_0;
+	Right.block<4, 3>(4 * n, 0) = M_X_N;
+
+	for (int i = 1; i < n; ++i)
+	{
+		Left.block<4, 4>(i * 4, i * 4 - 4) = Identity;
+		Left.block<4, 4>(i * 4, i * 4 + 4) = Identity;
+	}
+	Left.block<4, 4>(0, 0) = Identity;
+	Left.block<4, 4>(n * 4, n * 4) = Identity;
+
+	double a = kappa_tau_param[0];
+	double b = kappa_tau_param[1];
+	double c = kappa_tau_param[2];
+	double d = kappa_tau_param[3];
+
+	std::function<Eigen::Matrix4d(double)> A_s = [a, b, c, d](double s)->Eigen::Matrix4d
+	{
+		double k = a * s + b;
+		double r = c * s + d;
+		Eigen::Matrix4d M;
+		M << 0, 0, k, 0,
+			0, -k * k, a, k* r,
+			0, -a, -k * k - r * r, c,
+			0, k* r, -c, -r * r;
+		return M;
+	};
+
+	for (int i = 1; i < n; ++i)
+	{
+		double s = step_length * double(i);
+		Left.block<4, 4>(i * 4, i * 4) = -2 * Identity - A_s(s) * step_length * step_length;
+	}
+
+	Eigen::MatrixXd X = Eigen::MatrixXd::Zero(dim, 3);
+	X = Left.partialPivLu().solve(Right);
+	std::vector<ON_3dPoint> re(n + 1);
+	for (int i = 0; i < n + 1; ++i)
+	{
+		re[i] = ON_3dPoint(X(i * 4, 0), X(i * 4, 1), X(i * 4, 2));
+	}
+	return re;
 }

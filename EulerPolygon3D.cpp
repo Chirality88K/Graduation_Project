@@ -193,15 +193,16 @@ void EulerPolygon3D::EulerPolygonTest_ForCircularHelix(ONX_Model *model)
 
 void EulerPolygon3D::EulerPolygonExplainTest(ONX_Model *model)
 {
-	double model_size = 3.0;
+	double model_size = 0.5;
+	const int N = 40;
 	std::vector<ON_3dPoint> vp;
 	vp.push_back(ON_3dPoint::Origin);
 	vp.push_back(ON_3dPoint(1, 0, 0) * model_size);
 	double delta_theta = 0.01;
 	double theta0 = 0.1;
 	double delta_phi = 0.001;
-	double phi0 = 0.01;
-	for (int i = 2; i < 20; ++i)
+	double phi0 = 0.1;
+	for (int i = 2; i < N; ++i)
 	{
 		ON_3dVector v = vp[i - 1] - vp[i - 2];
 		PolarPoint3d polar_v(ON_3dPoint(v.x, v.y, v.z));
@@ -222,6 +223,7 @@ void EulerPolygon3D::EulerPolygonExplainTest(ONX_Model *model)
 	ChiralityAddNurbsCurve(model, obc, L"example bezier", bezier_layer_index);
 	ChiralityDebugInfo(obc, "example_bezier");
 	ChiralityDebugforR(obc, "example_bezier_for_R");
+	PrintDiscreteCurvature(vp);
 }
 
 std::vector<double> EulerPolygon3D::ComputeDeltaTheta() const

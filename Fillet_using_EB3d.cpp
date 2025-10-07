@@ -3,6 +3,8 @@
 #include "EulerBspline3D.h"
 #include "EulerBezier2D.h"
 #include "write3dm.h"
+#include "FixAxisBezier3D.h"
+#include "EulerBspline2D.h"
 
 Fillet_EB3D::Fillet_EB3D()
 {
@@ -23,20 +25,16 @@ void Fillet_EB3D::SetRailCurve(const ON_NurbsCurve &rail1, const ON_NurbsCurve &
 	mRailCurve[1] = rail2;
 }
 
-void Fillet_EB3D::SetVectorFeild(const std::function<ON_3dVector(double)> &v1, const std::function<ON_3dVector(double)> &v2)
+void Fillet_EB3D::SetFrenetField(const std::function<FrenetFrame(double)>& f1, const std::function<FrenetFrame(double)>& f2)
 {
-	mVectorField[0] = v1;
-	mVectorField[1] = v2;
+	mFrenetField[0] = f1;
+	mFrenetField[1] = f2;
 }
 
 ON_3dVector Fillet_EB3D::GetTangent(bool zero_or_one, double t)
 {
-	std::function<ON_3dVector(double)> VF = mVectorField[zero_or_one ? 1 : 0];
-	double t0, t1;
-	mRailCurve[zero_or_one ? 1 : 0].GetDomain(&t0, &t1);
-	ON_3dVector v = VF((t - t0) / (t1 - t0));
-	v.Unitize();
-	return v;
+
+	return ON_3dVector();
 }
 
 void Fillet_EB3D::GenerateBone()
@@ -48,20 +46,11 @@ void Fillet_EB3D::GenerateBone()
 	for (int i = 0; i <= num_of_bone; ++i)
 	{
 		double u = 1.0 / double(num_of_bone) * double(i);
-		ON_3dVector vs = mVectorField[0](double(i) / double(num_of_bone));
-		ON_3dVector ve = mVectorField[1](double(i) / double(num_of_bone));
-		EulerBspline3D onc(mRailCurve[0].PointAt(u), mRailCurve[1].PointAt(u), vs, ve);
-		num_cv = (std::max)(num_cv, onc.CVCount());
-	}
-	for (int i = 0; i <= num_of_bone; ++i)
-	{
-		double u = 1.0 / double(num_of_bone) * double(i);
-		m_u_knots.push_back(u);
-		ON_3dVector vs = mVectorField[0](double(i) / double(num_of_bone));
-		ON_3dVector ve = mVectorField[1](double(i) / double(num_of_bone));
-		ON_NurbsCurve *onc = new EulerBspline3D(mRailCurve[0].PointAt(u), mRailCurve[1].PointAt(u), vs, ve, num_cv);
+		ON_NurbsCurve* onc = new ON_NurbsCurve(FixAxisBezier3D::Interpolate(mFrenetField[0](u).GetPos(), mFrenetField[1](u).GetPos(),
+			mFrenetField[0](u).GetAlpha(), mFrenetField[1](u).GetAlpha()));
+		//num_cv = (std::max)(num_cv, onc->CVCount());
 		mBoneStructure.push_back(onc);
-		ChiralityDebugInfo(*onc, "Bone Structure" + std::to_string(i));
+		//ChiralityDebugInfo(*onc, "Bone Structure" + std::to_string(i));
 	}
 }
 
@@ -111,21 +100,27 @@ void Fillet_EB3D::Fillet_EB3D_Test(ONX_Model *model)
 	Fillet_EB3D test_fillet;
 	ON_NurbsCurve rail[2];
 	rail[0] = ChiralityMath::UniformG1(ON_3dPoint::Origin, ON_3dPoint(10, 0, 0), ON_3dVector(1, 2, 1), ON_3dVector(3, -1, -1));
+	rail[0].SetDomain(0, 1);
 	rail[1] = ChiralityMath::UniformG1(ON_3dPoint(0, 0, 20), ON_3dPoint(10, 0, 20), ON_3dVector(1, 2, 1), ON_3dVector(3, -1, -1));
-	auto lambda1 = [](double t) -> ON_3dVector
+	rail[1].SetDomain(0, 1);
+	auto lambda1 = [rail](double t) -> FrenetFrame
 	{
 		ON_3dVector v1(0, -1, 1);
 		ON_3dVector v2(1, 1, 1);
-		return v1 * (1 - t) + v2 * t;
+		ON_3dVector T = v1 * (1 - t) + v2 * t;
+		FrenetFrame f = ChiralityMath::GetFrenet(*rail, t);
+		return FrenetFrame(rail->PointAt(t), T, -f.GetBeta());
 	};
-	auto lambda2 = [](double t) -> ON_3dVector
+	auto lambda2 = [rail](double t) -> FrenetFrame
 	{
 		ON_3dVector v1(0, -1, 2);
 		ON_3dVector v2(1, 1, 1);
-		return v1 * (1 - t) + v2 * t;
+		ON_3dVector T = v1 * (1 - t) + v2 * t;
+		FrenetFrame f = ChiralityMath::GetFrenet(*(rail + 1), t);
+		return FrenetFrame((rail + 1)->PointAt(t), T, f.GetBeta());
 	};
 	test_fillet.SetRailCurve(rail[0], rail[1]);
-	test_fillet.SetVectorFeild(lambda1, lambda2);
+	test_fillet.SetFrenetField(lambda1, lambda2);
 	test_fillet.GenerateBone();
 	test_fillet.GenerateFillet();
 	const int layer_index1 = model->AddLayer(L"RailCurve", ON_Color::SaturatedMagenta);
@@ -191,18 +186,26 @@ void Fillet_EB3D::TwoSurfaces_Fillet_Test(ONX_Model *model)
 	rail2.Scale(1.3);
 	rail2.Translate(ON_3dVector(0, 0, -2));
 	fillet.SetRailCurve(rail1, rail2);
-	auto lambda1 = [](double t) -> ON_3dVector
+	auto lambda1 = [&rail1](double t) -> FrenetFrame
 	{
-		return ON_3dVector(0, 0, -1);
+		ON_3dPoint p = rail1.PointAt(t);
+		return FrenetFrame(p, ON_3dVector(0, 0, -1), ON_3dVector(p.x, p.y, 0));
 	};
-	auto lambda2 = [&fillet](double t) -> ON_3dVector
+	auto lambda2 = [&rail2](double t) -> FrenetFrame
 	{
-		ON_3dVector tv = fillet.mRailCurve[1].PointAt(t);
-		return ON_3dVector(tv.x, tv.y, 0.0);
+		FrenetFrame f = ChiralityMath::GetFrenet(rail2, t);
+		ON_3dPoint p = f.GetPos();
+		ON_3dVector T = f.GetBeta();
+		if (p.x * T.x + p.y * T.y <= 0)
+		{
+			T = -T;
+		}
+		ON_3dVector B = ON_3dVector::CrossProduct(ON_3dVector(0, 0, 1), T);
+		return FrenetFrame(p, T, B);
 	};
-	fillet.SetVectorFeild(lambda1, lambda2);
+	fillet.SetFrenetField(lambda1, lambda2);
 	fillet.GenerateBone();
-	fillet.GenerateFillet();
+	//fillet.GenerateFillet();
 	// Add all about fillet
 	const int layer_index1 = model->AddLayer(L"RailCurve", ON_Color::SaturatedMagenta);
 	ChiralityAddNurbsCurve(model, rail1, L"rail curve_0", layer_index1);
@@ -212,6 +215,159 @@ void Fillet_EB3D::TwoSurfaces_Fillet_Test(ONX_Model *model)
 	{
 		ChiralityAddNurbsCurve(model, *(fillet.mBoneStructure[i]), L"bone curve" + std::to_wstring(i), layer_index2);
 	}
-	const int layer_index3 = model->AddLayer(L"Fillet Surface", ON_Color::SaturatedGold);
-	ChiralityAddNurbsSurface(model, fillet, L"Surface", layer_index3);
+	//const int layer_index3 = model->AddLayer(L"Fillet Surface", ON_Color::SaturatedGold);
+	//ChiralityAddNurbsSurface(model, fillet, L"Surface", layer_index3);
+}
+
+static void ElevateToSameOrder(ON_BezierCurve* obc1, ON_BezierCurve* obc2)
+{
+	const int n = abs(obc1->Order() - obc2->Order());
+	if (obc1->Order() < obc2->Order())
+	{
+		for (int i = 0; i < n; ++i)
+		{
+			ChiralityMath::Elevate(*obc1);
+		}
+		return;
+	}
+	if (obc1->Order() > obc2->Order())
+	{
+		for (int i = 0; i < n; ++i)
+		{
+			ChiralityMath::Elevate(*obc2);
+		}
+		return;
+	}
+}
+
+void Fillet_EB3D::CircleSpiral_Test(ONX_Model* model)
+{
+	double R = 5.0;
+	double r = 0.6;
+	int circle = 15;
+	auto Curve = [R, r, circle](double theta, double offset = 0)->std::pair<ON_3dPoint, ON_3dVector> {
+		double phi = circle * theta + offset;
+		ON_3dPoint p = ON_3dPoint(cos(theta), sin(theta), 0) * R +
+			r * ON_3dPoint(-cos(phi) * cos(theta), -cos(phi) * sin(theta), sin(phi));
+		ON_3dVector v = R * ON_3dVector(-sin(theta), cos(theta), 0) +
+			r * circle * ON_3dVector(sin(phi) * cos(theta) + cos(phi) * sin(theta), sin(phi) * sin(theta), cos(phi));
+		return std::make_pair(p, v);
+	};
+
+	const int sample_cnt = circle;
+	for (int kk = 0; kk < sample_cnt; ++kk)
+	{
+		double theta1 = double(kk) * PI / double(sample_cnt);
+		double theta3 = double(kk + 1) * PI / double(sample_cnt);
+		double theta2 = (theta1 + theta3) / 2;
+		ON_3dPoint p1 = Curve(theta1).first;
+		ON_3dPoint p2 = Curve(theta2).first;
+		ON_3dPoint p3 = Curve(theta3).first;
+		ON_3dVector v1 = Curve(theta1).second;
+		ON_3dVector v2 = Curve(theta2).second;
+		ON_3dVector v3 = Curve(theta3).second;
+		ON_BezierCurve obc1_red = FixAxisBezier3D::Interpolate(p1, p2, v1, v2);
+		ON_BezierCurve obc2_red = FixAxisBezier3D::Interpolate(p2, p3, v2, v3);
+
+		p1 = Curve(theta1, PI).first;
+		p2 = Curve(theta2, PI).first;
+		p3 = Curve(theta3, PI).first;
+		v1 = Curve(theta1, PI).second;
+		v2 = Curve(theta2, PI).second;
+		v3 = Curve(theta3, PI).second;
+		ON_BezierCurve obc1_blue = FixAxisBezier3D::Interpolate(p1, p2, v1, v2);
+		ON_BezierCurve obc2_blue = FixAxisBezier3D::Interpolate(p2, p3, v2, v3);
+
+		ElevateToSameOrder(&obc1_red, &obc1_blue);
+		ElevateToSameOrder(&obc2_red, &obc2_blue);
+
+		ON_NurbsCurve blue = obc1_blue;
+		blue.Append(obc2_blue);
+		ON_NurbsCurve red = obc1_red;
+		red.Append(obc2_red);
+
+		ON_NurbsSurface ons(3, false, red.Order(), 2, red.CVCount(), 2);
+		for (int i = 0; i < red.CVCount(); ++i)
+		{
+			ON_3dPoint p;
+			red.GetCV(i, p);
+			ons.SetCV(i, 0, p);
+			blue.GetCV(i, p);
+			ons.SetCV(i, 1, p);
+		}
+		for (int i = 0; i < red.KnotCount(); ++i)
+		{
+			ons.SetKnot(0, i, *(red.Knot() + i));
+		}
+		ons.SetKnot(1, 0, 0);
+		ons.SetKnot(1, 1, 1);
+
+		const int layer_index = model->AddLayer(L"test_surface", ON_Color::SaturatedGold);
+		ChiralityAddNurbsSurface(model, ons, std::to_wstring(kk), layer_index);
+		//for (int i = 0; i < circle; ++i)
+		{
+			//ons.Rotate(2 * PI / double(circle), ON_3dVector::ZAxis, ON_3dPoint::Origin);
+			//ChiralityAddNurbsSurface(model, ons, L"test_surface", layer_index);
+		}
+	}
+	
+	
+	
+}
+
+void Fillet_EB3D::ThreeAngle_Test(ONX_Model* model)
+{
+	double R = 5.0;
+	std::vector <ON_3dPoint> vp;
+	ON_3dPoint begin_p(R * cos(PI / 2 - PI / 6), R * sin(PI / 2 - PI / 6), 0.0);
+	for (int i = 0; i < 3; ++i)
+	{
+		double mid_theta = PI / 2 + PI * 2 / 3 * i;
+		ON_3dVector v(cos(mid_theta), sin(mid_theta), 0.0);
+		ON_3dPoint P1(R * cos(mid_theta - PI / 6), R * sin(mid_theta - PI / 6), 0.0);
+		ON_3dPoint P2(R * cos(mid_theta + PI / 6), R * sin(mid_theta + PI / 6), 0.0);
+		ON_3dPoint Q1 = P1 + 1.5 * R * v;
+		ON_3dPoint Q2 = P2 + 1.5 * R * v;
+		vp.push_back(P1);
+		vp.push_back(Q1);
+		vp.push_back(Q2);
+		vp.push_back(P2);
+	}
+	vp.push_back(begin_p);
+	const int layer_index = model->AddLayer(L"test", ON_Color::SaturatedBlue);
+	ChiralityAddLines(model, vp, L"Polygons", layer_index);
+	double radius = 2.0;
+	std::vector<ON_NurbsCurve> v_onc;
+	for (int i = 0; i < vp.size() - 1; ++i)
+	{
+		int pre = i - 1;
+		int next = i + 1;
+		if (i == 0)
+		{
+			pre = vp.size() - 2;
+		}
+		v_onc.push_back(EulerBspline2D::GenerateSmoothingCorner(vp[i] + (vp[pre] - vp[i]) / (vp[pre] - vp[i]).Length() * radius,
+			vp[i], vp[i] + (vp[next] - vp[i]) / (vp[next] - vp[i]).Length() * radius));
+	}
+	const int index = model->AddLayer(L"Curve", ON_Color::SaturatedMagenta);
+	for (int i = 1; i < v_onc.size(); ++i)
+	{
+		ON_3dPoint Start = v_onc[0].PointAtEnd();
+		ON_3dPoint End = v_onc[i].PointAtStart();
+		ON_NurbsCurve line(2, false, 2, 2);
+		line.SetKnot(0, 0); line.SetKnot(1, 1);
+		line.SetCV(0, Start); line.SetCV(1, End);
+		v_onc[0].Append(line);
+		v_onc[0].Append(v_onc[i]);	
+	}
+	ON_3dPoint Start = v_onc[0].PointAtEnd();
+	ON_3dPoint End = v_onc[0].PointAtStart();
+	ON_NurbsCurve line(2, false, 2, 2);
+	line.SetKnot(0, 0); line.SetKnot(1, 1);
+	line.SetCV(0, Start); line.SetCV(1, End);
+	v_onc[0].Append(line);
+	ChiralityAddNurbsCurve(model, v_onc[0], L"Curve", index);
+	ON_NurbsSurface ons = ChiralityMath::GenerateCylinder(v_onc[0], ON_3dVector::ZAxis, -10, 10);
+	const int sur_index = model->AddLayer(L"Surface", ON_Color::SaturatedGold);
+	ChiralityAddNurbsSurface(model, ons, L"Surface", sur_index);
 }
