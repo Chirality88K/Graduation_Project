@@ -3,9 +3,9 @@
 #include "write3dm.h"
 #include <algorithm>
 #include <vector>
+#include <assert.h>
 
 using namespace std;
-extern const double PI;
 
 namespace EulerBspline2D
 {
@@ -529,5 +529,159 @@ namespace EulerBspline2D
 			ChiralityDebugforR(onc, "B-Spline Debug for R " + std::to_string(i));
 			ChiralityAddNurbsCurve(model, onc, L"curve" + std::to_wstring(i + 1), curves_layer_index);
 		}
+	}
+	double Compute_delta_theta(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, int cv_cnt)
+	{
+		const double alpha = ChiralityMath::ComputeSignedAngle(pe - ps, vs);
+		const double beta = ChiralityMath::ComputeSignedAngle(pe - ps, ve);
+		const int n = cv_cnt - 1;
+		int* coeff = new int[n];
+		for (int i = 0; i < n; ++i)
+		{
+			coeff[i] = 6;
+		}
+		coeff[0] = 1; coeff[n - 1] = 1;
+		coeff[1] = 5; coeff[n - 2] = 5;
+		auto F = [alpha, beta, n, coeff](double delta_theta)->double {
+			double sum = 0.0;
+			for (int k = 1; k <= n; ++k)
+			{
+				sum += coeff[k - 1] * sin(alpha * (n - k - 0.5) / (n - 2) + beta * (k - 1.5) / (n - 2) + 0.5 * ((k - 1) * (k - 2) - (k - 1.5) * (n - 2)) * delta_theta);
+			}
+			return sum;
+		};
+
+		const double F_0 = F(0.0);
+		double s_theta = -5.0 / cv_cnt;
+		double e_theta = 5.0 / cv_cnt;
+		constexpr int N = 100;
+		double t_e = 10;
+
+		int k = (n + 1) / 2;
+		double alpha_gap = alpha > 0 ? PI - alpha : PI + alpha;
+		double beta_gap = beta > 0 ? PI - beta : PI + beta;
+		double t_max = (std::max)(alpha_gap, beta_gap) * 2 / (k - 1) / (n - k);
+
+		if (alpha * beta > 0)
+		{
+			double step = alpha > 0 ? t_max / N : -t_max / N;
+			double t = step;
+			while (F(t) * F_0 > 0)
+			{
+				t += step;
+			}
+			t_e = t;
+		}
+		else
+		{
+			double step = t_max / N;
+			double t = step;
+			while (F(t) * F_0 > 0 && F(-t) * F_0 > 0)
+			{
+				t += step;
+			}
+			t_e = F(t) * F_0 > 0 ? -t : t;
+		}
+		assert(t_e < 10);
+		double t_s = 0.0;
+		if (t_s > t_e)
+		{
+			std::swap(t_s, t_e);
+		}
+		double x = ChiralityMath::Bisection(F, t_s, t_e);
+		delete[]coeff;
+		return x;
+	}
+
+	ON_NurbsCurve ComputeEulerBspline2D_Directly(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, double& error)
+	{
+		bool pass = false;
+		int cv_cnt = 10;
+		const int max_cv_cnt = 50;
+		std::vector<double> angles;
+		angles.reserve(max_cv_cnt);
+		double sum = 0.0;
+		double alpha = ChiralityMath::ComputeSignedAngle(pe - ps, vs);
+		double beta = ChiralityMath::ComputeSignedAngle(pe - ps, ve);
+		while (!pass && cv_cnt < max_cv_cnt)
+		{
+			angles.clear();
+			int n = cv_cnt - 1;
+			double delta_theta = Compute_delta_theta(ps, pe, vs, ve, cv_cnt);
+			pass = true;
+			for (int k = 1; k <= n; ++k)
+			{
+				angles.push_back(alpha * (n - k - 0.5) / (n - 2) + beta * (k - 1.5) / (n - 2) + 
+					0.5 * ((k - 1) * (k - 2) - (k - 1.5) * (n - 2)) * delta_theta);
+				if (abs(angles.back()) >= PI)
+				{
+					pass = false;
+				}
+				if (k > 1 && abs(angles[k - 1] - angles[k - 2]) >= PI / 2)
+				{
+					pass = false;
+				}
+			}
+			if (pass)
+			{
+				double a1 = angles[1] - angles[0];
+				double a2 = angles[2] - angles[1];
+				double an_1 = angles[n - 1] - angles[n - 2];
+				double an_2 = angles[n - 2] - angles[n - 3];
+				double Deltatheta = (an_2 - a1);
+				double s0 = (n + 1) * sin(a1) + (n - 2) * sin(a1 + a2) - 3 * (n - 1) * sin(a1) * cos(a1);
+				double s1 = -(n + 1) * sin(an_1) - (n - 2) * sin(an_2 + an_1) + 3 * (n - 1) * sin(an_1) * cos(an_1);
+				pass = Deltatheta * s0 >= 0 && s0 * s1 >= 0;
+			}
+			++cv_cnt;
+		}
+		cv_cnt = angles.size() + 1;
+		//assert(sum > 1e-6);
+		int n = cv_cnt - 1;
+		int* coeff = new int[n];
+		for (int i = 0; i < n; ++i)
+		{
+			coeff[i] = 6;
+		}
+		coeff[0] = 1; coeff[n - 1] = 1;
+		coeff[1] = 5; coeff[n - 2] = 5;
+		sum = 0.0;
+		int k = 0;
+		for (double t : angles)
+		{
+			sum += cos(t) * coeff[k];
+			++k;
+		}
+		double L = ps.DistanceTo(pe) / sum * 6;
+		delete[]coeff;
+		ON_NurbsCurve onc(2, false, 4, cv_cnt);
+		for (int i = 0; i < onc.KnotCount(); ++i)
+		{
+			onc.SetKnot(i, i + 1);
+		}
+		vs.Unitize(); ve.Unitize();
+		ON_3dVector D = pe - ps; D.Unitize(); D *= L;
+		ON_3dVector v0 = D; v0.Rotate(angles[0], ON_3dVector::ZAxis);
+		ON_3dVector v1 = D; v1.Rotate(angles[1], ON_3dVector::ZAxis);
+		ON_3dPoint P0 = ON_3dPoint(ps) - (5 * v0 + v1) / 6;
+		onc.SetCV(0, P0);
+		ON_3dPoint P = P0;
+		for (int i = 1; i < cv_cnt; ++i)
+		{
+			ON_3dVector v = D;
+			v.Rotate(angles[i - 1], ON_3dVector::ZAxis);
+			P = P + v;
+			onc.SetCV(i, P);
+		}
+		double t0, t1;
+		onc.GetDomain(&t0, &t1);
+		error = onc.PointAtStart().DistanceTo(ps) + onc.PointAtEnd().DistanceTo(pe) +
+			(onc.TangentAt(t0) - vs).Length() + (onc.TangentAt(t1) - ve).Length();
+		if (error > 1e-6)
+		{
+			CHIRALITY_WARN(std::string("Euler_BSpline!!"));
+			std::cout << "Direct Error: " << error << "\n";
+		}
+		return onc;
 	}
 } // namespace EulerBspline2D

@@ -23,9 +23,21 @@ void Fillet_EB3D::SetRailCurve(const ON_NurbsCurve &rail1, const ON_NurbsCurve &
 {
 	mRailCurve[0] = rail1;
 	mRailCurve[1] = rail2;
+	mRail_Param_Curve[0] = [rail1](double t)->FrenetFrame {
+		return ChiralityMath::GetFrenet(rail1, t);
+	};
+	mRail_Param_Curve[1] = [rail2](double t)->FrenetFrame {
+		return ChiralityMath::GetFrenet(rail2, t);
+	};
 }
 
-void Fillet_EB3D::SetFrenetField(const std::function<FrenetFrame(double)>& f1, const std::function<FrenetFrame(double)>& f2)
+void Fillet_EB3D::SetRailCurve(const std::function<FrenetFrame(double)>& pc1, const std::function<FrenetFrame(double)>& pc2)
+{
+	mRail_Param_Curve[0] = pc1;
+	mRail_Param_Curve[1] = pc2;
+}
+
+void Fillet_EB3D::SetFrenetField(const std::function<ON_3dVector(double)>& f1, const std::function<ON_3dVector(double)>& f2)
 {
 	mFrenetField[0] = f1;
 	mFrenetField[1] = f2;
@@ -37,20 +49,34 @@ ON_3dVector Fillet_EB3D::GetTangent(bool zero_or_one, double t)
 	return ON_3dVector();
 }
 
-void Fillet_EB3D::GenerateBone()
+void Fillet_EB3D::GenerateBone(bool is_set_bone_num, int bone_num)
 {
-	const int num_of_bone = (std::max)(mRailCurve[0].CVCount(), mRailCurve[1].CVCount()) + 1;
-	mRailCurve[0].SetDomain(0.0, 1.0);
-	mRailCurve[1].SetDomain(0.0, 1.0);
+	int num_of_bone = bone_num;
+	if (!is_set_bone_num)
+	{
+		num_of_bone = (std::max)(mRailCurve[0].CVCount(), mRailCurve[1].CVCount());
+		mRailCurve[0].SetDomain(0.0, 1.0);
+		mRailCurve[1].SetDomain(0.0, 1.0);
+	}
 	int num_cv = 0;
+	mBoneStructure.clear();
+	m_u_knots.clear();
+	std::vector<ON_BezierCurve> temp_bezier;
 	for (int i = 0; i <= num_of_bone; ++i)
 	{
 		double u = 1.0 / double(num_of_bone) * double(i);
-		ON_NurbsCurve* onc = new ON_NurbsCurve(FixAxisBezier3D::Interpolate(mFrenetField[0](u).GetPos(), mFrenetField[1](u).GetPos(),
-			mFrenetField[0](u).GetAlpha(), mFrenetField[1](u).GetAlpha()));
-		//num_cv = (std::max)(num_cv, onc->CVCount());
-		mBoneStructure.push_back(onc);
-		//ChiralityDebugInfo(*onc, "Bone Structure" + std::to_string(i));
+		temp_bezier.push_back(FixAxisBezier3D::Interpolate(mRail_Param_Curve[0](u).GetPos(), mRail_Param_Curve[1](u).GetPos(),
+			mFrenetField[0](u), mFrenetField[1](u)));
+		num_cv = (std::max)(num_cv, temp_bezier.back().CVCount());
+		m_u_knots.push_back(u);
+	}
+	for (ON_BezierCurve& obc : temp_bezier)
+	{
+		while (obc.CVCount() < num_cv)
+		{
+			ChiralityMath::Elevate(obc);
+		}
+		mBoneStructure.push_back(new ON_NurbsCurve(obc));
 	}
 }
 
@@ -58,10 +84,10 @@ void Fillet_EB3D::GenerateFillet()
 {
 	int n = mBoneStructure[0]->CVCount();
 	std::vector<std::pair<ON_3dVector, ON_3dVector>> pair_of_tan;
-	ON_3dVector v0_s = mRailCurve[0].TangentAt(0.0);
-	ON_3dVector v0_e = mRailCurve[0].TangentAt(1.0);
-	ON_3dVector v1_s = mRailCurve[1].TangentAt(0.0);
-	ON_3dVector v1_e = mRailCurve[1].TangentAt(1.0);
+	ON_3dVector v0_s = mRail_Param_Curve[0](0.0).GetAlpha();
+	ON_3dVector v0_e = mRail_Param_Curve[0](1.0).GetAlpha();
+	ON_3dVector v1_s = mRail_Param_Curve[1](0.0).GetAlpha();
+	ON_3dVector v1_e = mRail_Param_Curve[1](1.0).GetAlpha();
 	double t0, t1;
 	mBoneStructure[0]->GetDomain(&t0, &t1);
 	for (int i = 0; i < n; ++i)
@@ -103,21 +129,19 @@ void Fillet_EB3D::Fillet_EB3D_Test(ONX_Model *model)
 	rail[0].SetDomain(0, 1);
 	rail[1] = ChiralityMath::UniformG1(ON_3dPoint(0, 0, 20), ON_3dPoint(10, 0, 20), ON_3dVector(1, 2, 1), ON_3dVector(3, -1, -1));
 	rail[1].SetDomain(0, 1);
-	auto lambda1 = [rail](double t) -> FrenetFrame
+	auto lambda1 = [rail](double t) -> ON_3dVector
 	{
 		ON_3dVector v1(0, -1, 1);
 		ON_3dVector v2(1, 1, 1);
 		ON_3dVector T = v1 * (1 - t) + v2 * t;
-		FrenetFrame f = ChiralityMath::GetFrenet(*rail, t);
-		return FrenetFrame(rail->PointAt(t), T, -f.GetBeta());
+		return T;
 	};
-	auto lambda2 = [rail](double t) -> FrenetFrame
+	auto lambda2 = [rail](double t) -> ON_3dVector
 	{
 		ON_3dVector v1(0, -1, 2);
 		ON_3dVector v2(1, 1, 1);
 		ON_3dVector T = v1 * (1 - t) + v2 * t;
-		FrenetFrame f = ChiralityMath::GetFrenet(*(rail + 1), t);
-		return FrenetFrame((rail + 1)->PointAt(t), T, f.GetBeta());
+		return T;
 	};
 	test_fillet.SetRailCurve(rail[0], rail[1]);
 	test_fillet.SetFrenetField(lambda1, lambda2);
@@ -186,12 +210,11 @@ void Fillet_EB3D::TwoSurfaces_Fillet_Test(ONX_Model *model)
 	rail2.Scale(1.3);
 	rail2.Translate(ON_3dVector(0, 0, -2));
 	fillet.SetRailCurve(rail1, rail2);
-	auto lambda1 = [&rail1](double t) -> FrenetFrame
+	auto lambda1 = [&rail1](double t) -> ON_3dVector
 	{
-		ON_3dPoint p = rail1.PointAt(t);
-		return FrenetFrame(p, ON_3dVector(0, 0, -1), ON_3dVector(p.x, p.y, 0));
+		return ON_3dVector(0, 0, -1);
 	};
-	auto lambda2 = [&rail2](double t) -> FrenetFrame
+	auto lambda2 = [&rail2](double t) -> ON_3dVector
 	{
 		FrenetFrame f = ChiralityMath::GetFrenet(rail2, t);
 		ON_3dPoint p = f.GetPos();
@@ -200,8 +223,7 @@ void Fillet_EB3D::TwoSurfaces_Fillet_Test(ONX_Model *model)
 		{
 			T = -T;
 		}
-		ON_3dVector B = ON_3dVector::CrossProduct(ON_3dVector(0, 0, 1), T);
-		return FrenetFrame(p, T, B);
+		return T;
 	};
 	fillet.SetFrenetField(lambda1, lambda2);
 	fillet.GenerateBone();
@@ -367,7 +389,45 @@ void Fillet_EB3D::ThreeAngle_Test(ONX_Model* model)
 	line.SetCV(0, Start); line.SetCV(1, End);
 	v_onc[0].Append(line);
 	ChiralityAddNurbsCurve(model, v_onc[0], L"Curve", index);
-	ON_NurbsSurface ons = ChiralityMath::GenerateCylinder(v_onc[0], ON_3dVector::ZAxis, -10, 10);
+	ON_NurbsSurface ons = ChiralityMath::GenerateCylinder(v_onc[0], ON_3dVector::ZAxis, 2, 10);
 	const int sur_index = model->AddLayer(L"Surface", ON_Color::SaturatedGold);
 	ChiralityAddNurbsSurface(model, ons, L"Surface", sur_index);
+	ON_Plane plane(ON_3dPoint::Origin, ON_3dVector::ZAxis);
+	ON_PlaneSurface ops(plane);
+	ops.Translate(ON_3dVector(-0.5, -0.5, 0.0));
+	ops.Scale(40.0);
+	const int plane_index = model->AddLayer(L"plane", ON_Color::SaturatedCyan);
+	ChiralityAddPlane(model, ops, L"plane", plane_index);
+	ON_NurbsCurve rail1 = ChiralityMath::ChangeDimensionFrom2To3(v_onc[0]);
+	rail1.Translate(ON_3dVector(0, 0, 2));
+	ON_NurbsCurve rail2 = ChiralityMath::ChangeDimensionFrom2To3(v_onc[0]);
+	rail2.Scale(1.3);
+	Fillet_EB3D fillet;
+	rail1.SetDomain(0.0, 1.0);
+	rail2.SetDomain(0.0, 1.0);
+	fillet.SetRailCurve(rail1, rail2);
+	auto lambda1 = [&rail1](double t) -> ON_3dVector
+	{
+		return ON_3dVector(0, 0, -1);
+	};
+	auto lambda2 = [&rail2](double t) -> ON_3dVector
+	{
+		ON_3dPoint p = rail2.PointAt(t);
+		ON_3dVector T = ON_3dVector(p);
+		return T;
+	};
+	fillet.SetFrenetField(lambda1, lambda2);
+	fillet.GenerateBone();
+	fillet.GenerateFillet();
+	const int rail_index = model->AddLayer(L"RailCurve", ON_Color::SaturatedMagenta);
+	ChiralityAddNurbsCurve(model, rail1, L"rail curve_0", rail_index);
+	ChiralityAddNurbsCurve(model, rail2, L"rail_curve_1", rail_index);
+	const int bone_index = model->AddLayer(L"BoneStructure", ON_Color::SaturatedBlue);
+	for (int i = 0; i < fillet.mBoneStructure.size(); ++i)
+	{
+		ChiralityAddNurbsCurve(model, *(fillet.mBoneStructure[i]), L"bone curve" + std::to_wstring(i), bone_index);
+	}
+	const int fillet_index = model->AddLayer(L"Fillet Surface", ON_Color::SaturatedGold);
+	ChiralityAddNurbsSurface(model, fillet, L"Surface", fillet_index);
+	ChiralityDebugInfo(fillet);
 }

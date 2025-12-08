@@ -1,3 +1,6 @@
+#ifdef WIN32
+#pragma comment(lib, "Shlwapi.lib")
+#endif
 #include "write3dm.h"
 #include <cstdlib>
 #include <fstream>
@@ -9,13 +12,23 @@
 #include "ChiralityLog.h"
 #include "ChiralityMathTools.h"
 
-extern std::string gTableFolder;
-extern const double PI;
+std::string output_base_dir = "./Table/notsettime/";
+
+void SetOutput(const std::string& name)
+{
+	output_base_dir = "./Table/" + name + ChiralityPrintNowTime() + "/";
+	std::filesystem::create_directory(output_base_dir);
+}
+
+std::string GetOutputDir()
+{
+	return output_base_dir;
+}
 
 void ChiralityWrite3dmModel(const ONX_Model *model, const std::string &filename)
 {
 	ON_TextLog error_log;
-	std::string path = gTableFolder + filename;
+	std::string path = output_base_dir + filename;
 	wchar_t *const wc = new wchar_t[path.size() + 1];
 	std::mbstowcs(wc, path.c_str(), path.size() + 1);
 	bool success = model->Write(wc, 0, &error_log);
@@ -163,7 +176,7 @@ void PrintCurvature(const ON_BezierCurve &onc, const std::string &filename_witho
 	ON_3dVector v2;
 	ON_3dVector v3;
 	ON_3dPoint dump;
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	if (onc.Dimension() == 2)
 	{
 		std::ofstream ofs(filename);
@@ -220,7 +233,7 @@ void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_withou
 	ON_3dVector v2;
 	ON_3dVector v3;
 	ON_3dPoint dump;
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	if (onc.Dimension() == 2)
 	{
 		std::ofstream ofs(filename);
@@ -267,7 +280,7 @@ void PrintCurvature(const ON_NurbsCurve &onc, const std::string &filename_withou
 
 void PrintDiscreteCurvature(const std::vector<ON_3dPoint> &vp, const std::string &filename_without_extension)
 {
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	std::ofstream ofs(filename);
 	double length_total = 0.0;
 	for (size_t i = 1; i < vp.size() - 1ull; ++i)
@@ -282,7 +295,7 @@ void PrintDiscreteCurvature(const std::vector<ON_3dPoint> &vp, const std::string
 
 void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
 {
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	std::ofstream ofs(filename);
 	double k0 = 0;
 	double kn = 1;
@@ -306,7 +319,7 @@ void PrintPosAndTan(const ON_NurbsCurve &onc, const std::string &filename_withou
 
 void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
 {
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	std::ofstream ofs(filename);
 	ofs << "Type of curve:\t" << "B-Spline curve\n";
 	ofs << "Order:\t" << onc.Order() << "\tDegree:\t" << onc.Degree() << "\tNumber of control points:\t" << onc.CVCount() << "\n";
@@ -379,9 +392,43 @@ void ChiralityDebugInfo(const ON_NurbsCurve &onc, const std::string &filename_wi
 	CHIRALITY_ERROR(filename + "Fail to write debug information!");
 }
 
+void ChiralityDebugInfo(const ON_NurbsSurface &ons, const std::string &filename_without_extension)
+{
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".TXT";
+	std::ofstream ofs(filename);
+	ofs << "Type of surface:\t" << "Nurbs surface\n";
+	ofs << "Order:\t" << ons.Order(0) << "\t" << ons.Order(1) << "\n";
+	ofs << "Degree:\t" << ons.Degree(0) << "\t" << ons.Degree(1) << "\n";
+	ofs << "Number of control points:\t" << ons.CVCount(0) << "\t" << ons.CVCount(1) << "\n";
+	ofs << "Number of knots:\t" << ons.KnotCount(0) << "\t" << ons.KnotCount(1) << "\n";
+	ofs << "Knots_0:\n";
+	for (int i = 0; i < ons.KnotCount(0); ++i)
+	{
+		ofs << ons.Knot(0, i) << " ";
+	}
+	ofs << "\nKnots_1:\n";
+	for (int i = 0; i < ons.KnotCount(1); ++i)
+	{
+		ofs << ons.Knot(1, i) << " ";
+	}
+	ofs << "\nControl points: \n";
+	ON_3dPoint p;
+	for (int i = 0; i < ons.CVCount(0); ++i)
+	{
+		for (int j = 0; j < ons.CVCount(1); ++j)
+		{
+			ons.GetCV(i, j, p);
+			ofs << "(" << i << " , " << j << ")\t";
+			ofs << std::fixed << std::setprecision(6)
+				<< "(" << p.x << "," << p.y << "," << p.z << ")\n";
+		}
+	}
+	ofs.close();
+}
+
 void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_without_extension)
 {
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	std::ofstream ofs(filename);
 	ON_3dPoint p;
 	double k0 = 0;
@@ -404,7 +451,7 @@ void ChiralityDebugforR(const ON_NurbsCurve &onc, const std::string &filename_wi
 			ofs << std::fixed << std::setprecision(6) << t << "\t";
 			// ofs << "(" << p.x << "," << p.y << "," << p.z << ")" << "\t";
 			// ofs << "(" << v.x << "," << v.y << "," << v.z << ")\t";
-			ofs << std::fixed << std::setprecision(6) << kappa;
+			ofs << std::fixed << std::setprecision(6) << kappa << "\t" << std::setprecision(6) << 0.0;
 			ofs << std::endl;
 		}
 		ofs.close();
@@ -441,7 +488,7 @@ void ChiralityDebugforR(const std::vector<ON_NurbsCurve> &onc_list, const std::s
 		return;
 	}
 
-	std::string filename = gTableFolder + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
+	std::string filename = output_base_dir + filename_without_extension + "-" + ChiralityPrintNowTime() + ".txt";
 	std::ofstream ofs(filename);
 	double t = 0;
 	double kappa = 0;
@@ -492,10 +539,37 @@ void ChiralityAddPlane(ONX_Model *model, const ON_PlaneSurface &p, const std::ws
 	model->AddManagedModelGeometryComponent(ops, att);
 }
 
+void ChiralityAddQuadMesh(ONX_Model *model, const ParameterSurface &ps, int u_sample_num, int v_sample_num, const std::wstring &mesh_name, int layer_index)
+{
+	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();
+	att->m_layer_index = layer_index;
+	att->m_name = mesh_name.c_str();
+	ON_Mesh *mesh = new ON_Mesh(u_sample_num * v_sample_num, (u_sample_num + 1) * (v_sample_num + 1), true, false);
+	std::vector<std::vector<ON_3dPoint>> points;
+	std::vector<std::vector<ON_3dVector>> normals;
+	ps.Discretize(points, normals, u_sample_num, v_sample_num);
+	for (int i = 0; i <= u_sample_num; ++i)
+	{
+		for (int j = 0; j <= v_sample_num; ++j)
+		{
+			mesh->SetVertex(i * (v_sample_num + 1) + j, points[i][j]);
+			mesh->SetVertexNormal(i * (v_sample_num + 1) + j, normals[i][j]);
+		}
+	}
+	for (int i = 0; i < u_sample_num; ++i)
+	{
+		for (int j = 0; j < v_sample_num; ++j)
+		{
+			mesh->SetQuad(i * v_sample_num + j, i * (v_sample_num + 1) + j, i * (v_sample_num + 1) + j + 1, (i + 1) * (v_sample_num + 1) + j + 1, (i + 1) * (v_sample_num + 1) + j);
+		}
+	}
+	model->AddManagedModelGeometryComponent(mesh, att);
+}
+
 void ChiralityAddLines(ONX_Model *model, const std::vector<ON_3dPoint> &vp, const std::wstring &lines_name, int layer_index)
 {
 	ON_3dPointArray parray;
-	for (const ON_3dPoint& p : vp)
+	for (const ON_3dPoint &p : vp)
 	{
 		parray.Append(p);
 	}
@@ -506,9 +580,10 @@ void ChiralityAddLines(ONX_Model *model, const std::vector<ON_3dPoint> &vp, cons
 	model->AddManagedModelGeometryComponent(opc, att);
 }
 
-void ChiralityAddCylindricalHelix(ONX_Model* model, double R, double ratio, double begin, double end, const std::wstring& name, int layer_index)
+void ChiralityAddCylindricalHelix(ONX_Model *model, double R, double ratio, double begin, double end, const std::wstring &name, int layer_index)
 {
-	auto CylindricalHelix = [R, ratio](double theta)->ON_3dPoint {
+	auto CylindricalHelix = [R, ratio](double theta) -> ON_3dPoint
+	{
 		return ON_3dPoint(R * cos(theta), R * sin(theta), ratio * theta);
 	};
 	const int resolution = 200;
@@ -518,20 +593,21 @@ void ChiralityAddCylindricalHelix(ONX_Model* model, double R, double ratio, doub
 		double theta = begin * (1 - double(i) / double(resolution)) + end * double(i) / double(resolution);
 		parray.Append(CylindricalHelix(theta));
 	}
-	ON_3dmObjectAttributes* att = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *att = new ON_3dmObjectAttributes();
 	att->m_layer_index = layer_index;
 	att->m_name = name.c_str();
-	ON_PolylineCurve* opc = new ON_PolylineCurve(ON_Polyline(parray));
+	ON_PolylineCurve *opc = new ON_PolylineCurve(ON_Polyline(parray));
 	model->AddManagedModelGeometryComponent(opc, att);
 }
 
-std::string doubleToScientificString(double value) {
+std::string doubleToScientificString(double value)
+{
 	std::ostringstream oss;
 	oss << std::scientific << std::setprecision(15) << value;
 	return oss.str();
 }
 
-void ChiralityDrawDNA(ONX_Model* model)
+void ChiralityDrawDNA(ONX_Model *model)
 {
 	const int index1 = model->AddLayer(L"test1", ON_Color::SaturatedRed);
 	const int index2 = model->AddLayer(L"test2", ON_Color::SaturatedBlue);
@@ -539,7 +615,8 @@ void ChiralityDrawDNA(ONX_Model* model)
 	double ratio = 2.0;
 	double begin = 0.0;
 	double end = 4 * PI;
-	auto CylindricalHelix = [R, ratio](double theta)->ON_3dPoint {
+	auto CylindricalHelix = [R, ratio](double theta) -> ON_3dPoint
+	{
 		return ON_3dPoint(R * cos(theta), R * sin(theta), ratio * theta);
 	};
 	const int resolution = 200;
@@ -551,15 +628,81 @@ void ChiralityDrawDNA(ONX_Model* model)
 		parray1.Append(CylindricalHelix(theta));
 		parray2.Append(CylindricalHelix(theta + PI) - ON_3dVector::ZAxis * ratio * PI);
 	}
-	ON_3dmObjectAttributes* att1 = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *att1 = new ON_3dmObjectAttributes();
 	att1->m_layer_index = index1;
 	att1->m_name = L"DNA1";
-	ON_PolylineCurve* opc1 = new ON_PolylineCurve(ON_Polyline(parray1));
+	ON_PolylineCurve *opc1 = new ON_PolylineCurve(ON_Polyline(parray1));
 	model->AddManagedModelGeometryComponent(opc1, att1);
 
-	ON_3dmObjectAttributes* att2 = new ON_3dmObjectAttributes();
+	ON_3dmObjectAttributes *att2 = new ON_3dmObjectAttributes();
 	att2->m_layer_index = index2;
 	att2->m_name = L"DNA2";
-	ON_PolylineCurve* opc2 = new ON_PolylineCurve(ON_Polyline(parray2));
+	ON_PolylineCurve *opc2 = new ON_PolylineCurve(ON_Polyline(parray2));
 	model->AddManagedModelGeometryComponent(opc2, att2);
+}
+
+void ChiralityPrintBezierForPython(const ON_BezierCurve& obc, const std::string& name)
+{
+	std::string filename = output_base_dir + name + ".bezier";
+	std::ofstream ofs(filename);
+	ON_3dPoint p;
+	bool is_3dim = obc.Dimension() == 3;
+	for (int i = 0; i < obc.CVCount(); ++i)
+	{
+		obc.GetCV(i, p);
+		ofs << p.x << "\t" << p.y;
+		if (is_3dim)
+		{
+			ofs << "\t" << p.z << "\n";
+		}
+		else
+		{
+			ofs << "\n";
+		}
+	}
+	ofs.close();
+}
+
+void ChiralityPrintCubicIntKnotBSplineForPython(const ON_NurbsCurve& onc, const std::string& name)
+{
+	std::string filename = output_base_dir + name + ".bspline";
+	std::ofstream ofs(filename);
+	ON_3dPoint p;
+	bool is_3dim = onc.Dimension() == 3;
+	for (int i = 0; i < onc.CVCount(); ++i)
+	{
+		ofs << "CV\t";
+		onc.GetCV(i, p);
+		ofs << p.x << "\t" << p.y;
+		if (is_3dim)
+		{
+			ofs << "\t" << p.z << "\n";
+		}
+		else
+		{
+			ofs << "\n";
+		}
+	}
+	const int N = 1000;
+	double u0, u1;
+	onc.GetDomain(&u0, &u1);
+	for (int i = 0; i < N; ++i)
+	{
+		double t = (1 - double(i) / (N - 1)) * u0 + double(i) / (N - 1) * u1;
+		ofs << "P\t" << t << "\t";
+		ON_3dVector dp, ddp;
+		onc.Ev2Der(t, p, dp, ddp);
+		ofs << p.x << "\t" << p.y;
+		if (is_3dim)
+		{
+			double cur = ON_3dVector::CrossProduct(dp, ddp).Length() / pow(dp.Length(), 3);
+			ofs << "\t" << p.z << "\t" << cur << "\n";
+		}
+		else
+		{
+			double cur = (dp.x * ddp.y - dp.y * ddp.x) / pow(dp.Length(), 3);
+			ofs << "\t" << cur << "\n";
+		}
+	}
+	ofs.close();
 }

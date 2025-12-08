@@ -23,8 +23,10 @@ public:
     static ON_BezierCurve Interpolate(ON_3dPoint ps, ON_3dPoint pe, ON_3dPoint vs, ON_3dPoint ve);
     static void Test(ONX_Model* model);
     static void GenerateDNA(ONX_Model* model);
+    static void Conic_Spiral_Test(ONX_Model* model);
 
 private:
+    ON_BezierCurve ComputeBezier3DWithAxis(double theta, int cv_cnt, double* error) const;
     static void SmoothingWithFixedT(ON_BezierCurve& obc, ON_3dVector T);
     static std::vector<double> ComputeLength(const ON_BezierCurve& obc);
     static std::vector<double> ComputeRotatingAngles(const ON_BezierCurve& obc, ON_3dVector T);

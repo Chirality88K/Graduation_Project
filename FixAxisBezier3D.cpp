@@ -5,6 +5,8 @@
 #include "ChiralityMathTools.h"
 #include <sstream>
 #include <iomanip>
+#include <assert.h>
+#include "BoundaryRecorder.h"
 
 ON_BezierCurve FixAxisBezier3D::Project_to_Plane(ON_3dVector T) const
 {
@@ -88,6 +90,7 @@ static double FindMinValue(const std::function<double(double)>& F, double x, dou
             }
         }
         if (value0 < 1e-6) {
+            std::cout << "Iteration times: " << (i + 1) << "\n";
             return value0;
         }
     }
@@ -143,6 +146,112 @@ std::pair<double, double> FixAxisBezier3D::IterationForFirstTime(double* error) 
     return std::make_pair(t_theta_start, t_theta_end);
 }
 
+static bool FindZero(const std::function<double(double)>& F, double L, double R, double* solve, double* error, int sample_cnt = 10)
+{
+    if (L > R)
+    {
+        std::swap(L, R);
+    }
+    assert(solve != nullptr);
+    double value = F(L);
+    if (abs(value) < 1e-8)
+    {
+        *solve = L;
+        *error = abs(value);
+        return true;
+    }
+    int sign = value > 0 ? 1 : -1;
+    double step = (R - L) / sample_cnt;
+    for (int i = 1; i <= sample_cnt; ++i)
+    {
+        double t = L + step * i;
+        value = F(t);
+        if (abs(value) < 1e-8)
+        {
+            *solve = t;
+            *error = abs(value);
+            return true;
+        }
+        int now_sign = value > 0 ? 1 : -1;
+        if (sign * now_sign == -1)
+        {
+            *solve = ChiralityMath::Bisection(F, t - step, t, error);
+            return true;
+        }
+        sign = now_sign;
+    }
+    return false;
+}
+
+static double GetStartValue(ON_3dPoint ps, ON_3dPoint pe, ON_3dVector vs, ON_3dVector ve)
+{
+    ON_3dVector X = vs + ve;
+    ON_3dVector Y = ON_3dVector::CrossProduct(vs, ve);
+    X.Unitize();
+    Y.Unitize();
+    int cv_cnt = 40;
+    auto Func = [X,Y,ps,pe,vs,ve,&cv_cnt](double theta)->double {
+        ON_3dVector T = X * cos(theta) + Y * sin(theta);
+        double H = ON_3dVector::DotProduct(pe - ps, T);
+        ON_3dPoint plane_ps = ps;
+        ON_3dPoint plane_pe = pe - ON_3dVector::DotProduct((pe - ps), T) * T;
+        ON_3dVector plane_vs = vs - ON_3dVector::DotProduct(vs, T) * T;
+        ON_3dVector plane_ve = ve - ON_3dVector::DotProduct(ve, T) * T;
+        double vs_pro_T = ON_3dVector::DotProduct(vs, T);
+        double cos_angle = abs(ON_3dVector::DotProduct(vs, plane_vs)) / vs.Length() / plane_vs.Length();
+        double sin_angle = 0.0;
+        if (abs(cos_angle) >= 1.0)
+        {
+            sin_angle = 0.0;
+            cos_angle = cos_angle > 0 ? 1.0 : -1.0;
+        }
+        else
+        {
+            sin_angle = sqrt(1 - cos_angle * cos_angle);
+        }
+        double tan_angle = sin_angle / cos_angle;
+        if (vs_pro_T < 0)
+        {
+            tan_angle = -tan_angle;
+        }
+        ON_Xform rotate;
+        rotate.Rotation(T, ON_3dVector::ZAxis, ON_3dPoint::Origin);
+        ON_Xform translation;
+        translation.Translation(-ON_3dVector(ps));
+        ON_Xform trans_and_rotate = rotate * translation;
+        plane_vs.Unitize();
+        plane_ve.Unitize();
+        plane_ps.Transform(trans_and_rotate);
+        plane_pe.Transform(trans_and_rotate);
+        plane_vs.Transform(trans_and_rotate);
+        plane_ve.Transform(trans_and_rotate);
+        double e;
+        double L = EulerBezier2D::Compute_L_for_fixed_cv_cnt(ON_2dPoint(plane_ps.x, plane_ps.y), ON_2dPoint(plane_pe.x, plane_pe.y),
+            ON_2dVector(plane_vs.x, plane_vs.y), ON_2dVector(plane_ve.x, plane_ve.y), cv_cnt);
+        return tan_angle * L * (cv_cnt - 1) - H;
+    };
+    double result_theta;
+    double error = 10.0;
+    if (FindZero(Func, 0.05 * PI, 0.95 * PI, &result_theta, &error))
+    {
+        if (error > 1e-6)
+        {
+            BoundaryRecorder::GetRecorder().Append(ps, pe, vs, ve);
+        }
+        return result_theta;
+    }
+    if (FindZero(Func, -0.5 * PI, 0.5 * PI, &result_theta, &error, 11))
+    {
+        if (error > 1e-6)
+        {
+            BoundaryRecorder::GetRecorder().Append(ps, pe, vs, ve);
+        }
+        return result_theta;
+    }
+    assert(error != 10.0);
+    return PI / 2;
+}
+
 ON_BezierCurve FixAxisBezier3D::BisectionIteration(double start, double end, double* in_error, ON_3dVector& TT) const
 {
     double min_error = *in_error;
@@ -153,7 +262,7 @@ ON_BezierCurve FixAxisBezier3D::BisectionIteration(double start, double end, dou
     Y.Unitize();
     ON_3dVector Z = ON_3dVector::CrossProduct(X, Y);
     ON_3dVector pspe = mPE - mPS;
-    ON_3dVector vp = pspe / pspe.Unitize();
+    ON_3dVector vp = pspe / pspe.Length();
     ON_3dVector pro_vp = vp - ON_3dVector::DotProduct(vp, Z) * Z;
     double init_cos = ON_3dVector::DotProduct(pro_vp, X) / pro_vp.Length();
     double init_tan = -ON_3dVector::DotProduct(X, pspe) / ON_3dVector::DotProduct(Y, pspe);
@@ -182,17 +291,15 @@ ON_BezierCurve FixAxisBezier3D::BisectionIteration(double start, double end, dou
         plane_pe.Transform(trans_and_rotate);
         plane_vs.Transform(trans_and_rotate);
         plane_ve.Transform(trans_and_rotate);
-        ON_BezierCurve renew_plane_obc = ChiralityMath::BezierG1_xOy(plane_ps,plane_pe, plane_vs, plane_ve);
-        for (int i = 0; i < 20; ++i)
-        {
-            EulerBezier2D::Elevate(&renew_plane_obc);  
-        }
-        EulerBezier2D::SmoothingBezierControlPolygon(&renew_plane_obc);
-        ON_BezierCurve plane_obc_prepare_to_space(3, false, renew_plane_obc.Order());
-        for (int i = 0; i < renew_plane_obc.Order(); ++i)
+        double e;
+        ON_BezierCurve plane_obc_computed_directly = 
+            EulerBezier2D::ComputeEulerBezier2D_Directly(plane_ps, plane_pe, ON_2dVector(plane_vs), ON_2dVector(plane_ve), 40, e);
+
+        ON_BezierCurve plane_obc_prepare_to_space(3, false, plane_obc_computed_directly.Order());
+        for (int i = 0; i < plane_obc_computed_directly.Order(); ++i)
         {
             ON_3dPoint p;
-            renew_plane_obc.GetCV(i, p);
+            plane_obc_computed_directly.GetCV(i, p);
             plane_obc_prepare_to_space.SetCV(i, ON_3dPoint(p.x, p.y, 0.0));
         }
         plane_obc_prepare_to_space.Transform(reverse);
@@ -208,9 +315,11 @@ ON_BezierCurve FixAxisBezier3D::BisectionIteration(double start, double end, dou
     };
     //auto pair = IterationForFirstTime(in_error);
     //min_error = FindMinValue(F, (pair.first + pair.second) / 2, (pair.first - pair.second) / 2);
-    min_error = FindMinValue(F, PI / 2, PI / 12);
-    *in_error = min_error;
-    std::cout << min_error << "\n";
+    double theta_begin = GetStartValue(mPS, mPE, mVS, mVE);
+    final_result = ComputeBezier3DWithAxis(theta_begin, 40, in_error);
+    //std::cout << "New_Method_Error: " << F(theta_begin) << "\n";
+    //std::cout << "Default_Error: " << F(PI / 2) << "\n";
+    //min_error = FindMinValue(F, theta_begin, PI / 12);
     return final_result;
 }
 
@@ -225,7 +334,7 @@ ON_BezierCurve FixAxisBezier3D::Interpolate(ON_3dPoint ps, ON_3dPoint pe, ON_3dP
         ChiralityMath::Elevate(obc);
         SmoothingWithFixedT(obc, T);
     }
-    ChiralityDebugforR(obc, std::string("Random_Test") + "error" + doubleToScientificString(error));
+    ChiralityDebugforR(obc, std::string("FixAxisBezier3D_") + "error_" + doubleToScientificString(error));
     return obc;
 }
 
@@ -303,6 +412,59 @@ void FixAxisBezier3D::GenerateDNA(ONX_Model* model)
     }
 }
 
+void FixAxisBezier3D::Conic_Spiral_Test(ONX_Model* model)
+{
+    double a = 10.0;
+    double b = -0.1;
+    double alpha = PI / 3;
+    auto conic_spiral = [a, b, alpha](double theta) -> FrenetFrame
+    {
+        ON_3dPoint p = ON_3dPoint(sin(alpha) * cos(theta), sin(alpha) * sin(theta), cos(alpha)) * a * exp(b * theta);
+        ON_3dVector der = ON_3dVector(b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), b * sin(alpha) * sin(theta) + sin(alpha) * cos(theta), b * cos(alpha));
+        der.Unitize();
+        ON_3dVector derder = (a * b * exp(b * theta)) * ON_3dVector(b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), b * sin(alpha) * sin(theta) + sin(alpha) * cos(theta), b * cos(alpha)) + (a * exp(b * theta)) * ON_3dVector(-b * sin(alpha) * sin(theta) - sin(alpha) * cos(theta),
+            b * sin(alpha) * cos(theta) - sin(alpha) * sin(theta), 0);
+        ON_3dVector N = ON_3dVector::CrossProduct(der, derder);
+        ON_3dVector B = ON_3dVector::CrossProduct(N, der);
+        B.Unitize();
+        return FrenetFrame(p, der, B);
+    };
+    std::vector<ON_NurbsCurve> vec_bec;
+    int num_pieces = 10;
+    vec_bec.resize(num_pieces);
+    const int bezier_layer_index = model->AddLayer(L"bezier_layer", ON_Color::SaturatedMagenta);
+    const int surface_layer_index = model->AddLayer(L"Pipeline_layer", ON_Color::SaturatedGold);
+    double length_of_one_piece = PI / 3 * 2;
+    for (int i = 0; i < num_pieces; ++i)
+    {
+        FrenetFrame f1 = conic_spiral(double(i) * length_of_one_piece);
+        FrenetFrame f2 = conic_spiral(double(i + 1) * length_of_one_piece);
+        vec_bec[i] = FixAxisBezier3D::Interpolate(f1.GetPos(), f2.GetPos(), f1.GetAlpha(), f2.GetAlpha());
+        const auto& temp = vec_bec[i];
+        double radius = 0.5;
+        auto pos = [temp,radius](double u, double v)->ON_3dPoint{
+            FrenetFrame f = ChiralityMath::GetFrenet(temp, u);
+            return f.GetPos() + (f.GetBeta() * cos(v) + f.GetGamma() * sin(v)) * radius;
+        };
+
+        auto normal = [temp, radius](double u, double v)->ON_3dVector {
+            FrenetFrame f = ChiralityMath::GetFrenet(temp, u);
+            double kappa = temp.CurvatureAt(u).Length();
+            double tau = ChiralityMath::Torsion(temp, u);
+            ON_3dVector der_u = temp.DerivativeAt(u) + radius * (cos(v) * (-kappa * f.GetAlpha() + tau * f.GetGamma()) + sin(v) * (-tau * f.GetBeta()));
+            ON_3dVector der_v = -sin(v) * f.GetBeta() + cos(v) * f.GetGamma();
+            ON_3dVector n = ON_3dVector::CrossProduct(der_u, der_v);
+            n.Unitize();
+            return n;
+        };
+
+        double range[4] = { 0.0,1.0,0.0,2 * PI };
+        ParameterSurface ps(pos, normal, range);
+        ChiralityAddNurbsCurve(model, vec_bec[i], L"conic_spiral_Bezier_" + std::to_wstring(i), bezier_layer_index);
+        ChiralityAddQuadMesh(model, ps, 100, 50, L"Surface_" + std::to_wstring(i), surface_layer_index);
+    }
+}
+
 static double ComputeMean(std::vector<double>& v)
 {
     double avg = 0.0;
@@ -323,6 +485,58 @@ static double ComputeCV(std::vector<double>& v)
         cv += (l - mean) * (l - mean);
     }
     return sqrt(cv / v.size()) / mean;
+}
+
+ON_BezierCurve FixAxisBezier3D::ComputeBezier3DWithAxis(double theta, int cv_cnt, double* e) const
+{
+    ON_BezierCurve final_result;
+    ON_3dVector X = mVS + mVE;
+    ON_3dVector Y = ON_3dVector::CrossProduct(mVS, mVE);
+    X.Unitize();
+    Y.Unitize();
+    ON_3dVector T = X * cos(theta) + Y * sin(theta);
+    ON_BezierCurve plane_obc = Project_to_Plane(T);
+    ON_Xform rotate;
+    rotate.Rotation(T, ON_3dVector::ZAxis, ON_3dPoint::Origin);
+    ON_Xform translation;
+    translation.Translation(-ON_3dVector(mPS));
+    ON_Xform trans_and_rotate = rotate * translation;
+    ON_Xform reverse = trans_and_rotate.Inverse();
+    ON_3dPoint plane_ps = mPS;
+    ON_3dPoint plane_pe = mPE - ON_3dVector::DotProduct((mPE - mPS), T) * T;
+    ON_3dVector plane_vs = mVS - ON_3dVector::DotProduct(mVS, T) * T;
+    ON_3dVector plane_ve = mVE - ON_3dVector::DotProduct(mVE, T) * T;
+    plane_vs.Unitize();
+    plane_ve.Unitize();
+    plane_ps.Transform(trans_and_rotate);
+    plane_pe.Transform(trans_and_rotate);
+    plane_vs.Transform(trans_and_rotate);
+    plane_ve.Transform(trans_and_rotate);
+    double* angles = new double[cv_cnt - 1];
+    double L = EulerBezier2D::Compute_L_for_fixed_cv_cnt(ON_2dPoint(plane_ps.x, plane_ps.y), ON_2dPoint(plane_pe.x, plane_pe.y),
+        ON_2dVector(plane_vs.x, plane_vs.y), ON_2dVector(plane_ve.x, plane_ve.y), cv_cnt, angles);
+    ON_BezierCurve obc(3, false, cv_cnt);
+    obc.SetCV(0, plane_ps);
+    ON_3dPoint P = plane_ps;
+    for (int i = 1; i < cv_cnt; ++i)
+    {
+        ON_3dVector v = plane_pe - plane_ps;
+        v.Unitize();
+        v.Rotate(angles[i - 1], ON_3dVector::ZAxis);
+        P = P + L * v;
+        obc.SetCV(i, P);
+    }
+    delete[] angles;
+
+    obc.Transform(reverse);
+    double error = 100.0;
+    ON_BezierCurve space_obc = Go_Back_To_Space(obc, T, &error);
+    std::cout << "error: " << error << "\n";
+    if (e != nullptr)
+    {
+        *e = error;
+    }
+    return space_obc;
 }
 
 void FixAxisBezier3D::SmoothingWithFixedT(ON_BezierCurve& obc, ON_3dVector T)

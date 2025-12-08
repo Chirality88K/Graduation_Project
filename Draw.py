@@ -7,6 +7,7 @@ def plot_txt_file(txt_path, img_path, is_cur=True):
         for line in f:
             parts = line.strip().split()
             if len(parts) < 3:
+                print("value error!!!")
                 continue
             try:
                 x_val = float(parts[0])

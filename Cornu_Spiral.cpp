@@ -2,27 +2,19 @@
 #include <assert.h>
 #include "Spiral.h"
 #include "write3dm.h"
-extern const double PI;
+#include "ChiralityMathTools.h"
 
 Cornu_Spiral::Cornu_Spiral(ON_2dPoint p1, ON_2dPoint p2, ON_2dVector t1, ON_2dVector t2)
 {
+	assert(Check_And_Init(p1, p2, t1, t2));
 	ON_2dVector D = p2 - p1;
 	double length = D.Length();
 	t1.Unitize();
 	t2.Unitize();
-	double product1 = (t1.x * D.x + t1.y * D.y) / length;
-	assert(product1 > -1 && product1 < 1);
-	double phi1 = acos(product1);
-	if (t1.x * D.y - t1.y * D.x < 0)
-	{
-		phi1 = -phi1;
-	}
-	double product2 = (t2.x * D.x + t2.y * D.y) / length;
-	assert(product2 > -1 && product2 < 1);
-	double phi2 = acos(product2);
-	assert(D.x * t2.y - D.y * t2.x >= 0);
-	assert(phi1 + phi2 > 0);
-	assert(phi1 != phi2);
+	double phi1 = ChiralityMath::ComputeSignedAngle(t1, D);
+	double phi2 = ChiralityMath::ComputeSignedAngle(D, t2);
+	assert((0 < phi1 && phi1 < phi2&& phi2 < PI) ||
+		(-PI < phi1&& phi1 < 0 && phi2 > 0 && phi1 + phi2 > 0));
 	double h_phi1_phi2 = Compute_S(phi1 + phi2) * cos(phi1) - Compute_C(phi1 + phi2) * sin(phi1);
 	if (0 < phi1 && phi1 < phi2 && h_phi1_phi2 <= 0)
 	{
@@ -52,28 +44,161 @@ Cornu_Spiral::Cornu_Spiral(ON_2dPoint p1, ON_2dPoint p2, ON_2dVector t1, ON_2dVe
 	}
 }
 
+ParameterCurve Cornu_Spiral::GetParameterCurve() const
+{
+	ON_3dPoint P = m_P0;
+	ON_3dVector T = m_T0;
+	ON_3dVector N = m_N0;
+	double a = m_a;
+	bool is_reverse = m_is_reverse;
+	bool is_mirror = m_is_mirror;
+	ON_Xform form;
+	ON_3dPoint ps = m_PS;
+	ON_3dPoint pe = m_PE;
+	ON_3dVector normal = ON_3dVector::CrossProduct(ON_3dVector::ZAxis, pe - ps);
+	form.Mirror(ps, normal);
+	double startLength = GetSignedArcLength(m_theta0);
+	double totalLength = GetSignedArcLength(m_theta1) - startLength;
+	auto pos = [=](double s)->FrenetFrame {
+		int inverse = 1;
+		if (is_reverse)
+		{
+			s = totalLength - s;
+			inverse = -1;
+		}
+		double t;
+		if (s + startLength >= 0)
+		{
+			t = pow(s + startLength, 2) * PI / 2 / a / a;
+		}
+		else
+		{
+			t = -pow(s + startLength, 2) * PI / 2 / a / a;
+		}
+		double C = Cornu_Spiral::Compute_C(abs(t));
+		double S = Cornu_Spiral::Compute_S(abs(t));
+		ON_3dPoint pp;
+		ON_3dVector alpha, beta;
+		if (t >= 0)
+		{
+			pp = P + a * (C * T + S * N);
+			alpha = cos(t) * T + sin(t) * N;
+			beta = alpha;
+			beta.Rotate(1, 0, ON_3dVector::ZAxis);
+		}
+		else
+		{
+			pp = P - a * (C * T + S * N);
+			alpha = cos(t) * T - sin(t) * N;
+			beta = alpha;
+			beta.Rotate(1, 0, ON_3dVector::ZAxis);
+		}
+		if (is_mirror)
+		{
+			pp.Transform(form);
+			alpha.Transform(form);
+			beta.Transform(form);
+		}
+		return FrenetFrame(pp, alpha * inverse, beta * inverse);
+	};
+
+	auto der = [=](double s)->ON_3dVector {
+		int inverse = 1;
+		if (is_reverse)
+		{
+			s = totalLength - s;
+			inverse = -1;
+		}
+		double t;
+		if (s + startLength >= 0)
+		{
+			t = pow(s + startLength, 2) * PI / 2 / a / a;
+		}
+		else
+		{
+			t = -pow(s + startLength, 2) * PI / 2 / a / a;
+		}
+		ON_3dVector alpha;
+		if (t >= 0)
+		{
+			alpha = cos(t) * T + sin(t) * N;
+		}
+		else
+		{
+			alpha = cos(t) * T - sin(t) * N;
+		}
+		alpha *= a / sqrt(2 * PI * abs(t));
+		if (is_mirror)
+		{
+			alpha.Transform(form);
+		}
+		return alpha * inverse;
+	};
+	double range[2] = { 0,totalLength };
+	ParameterCurve pc(pos, range);
+	pc.SetDerivative(der);
+	return pc;
+}
+
+ParameterCurve Cornu_Spiral::GetParamCornuSpiral(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve)
+{
+	Cornu_Spiral c_s(ps, pe, vs, ve);
+	return c_s.GetParameterCurve();
+}
+
+ON_NurbsCurve Cornu_Spiral::GetNurbs(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve)
+{
+	Cornu_Spiral c_s(ps, pe, vs, ve);
+	int n = 1000;
+	double theta = 0;
+	double s0 = c_s.GetSignedArcLength(c_s.m_theta0);
+	std::vector<ON_3dPoint> pv;
+	std::vector<double> knot;
+	for (int i = 0; i <= 20; i++)
+	{
+		theta = (c_s.m_theta1 - c_s.m_theta0) / n * i * 50 + c_s.m_theta0;
+		ON_2dPoint p = c_s.GetValue(theta);
+		pv.push_back(p);
+		knot.push_back(c_s.GetSignedArcLength(theta) - s0);
+	}
+	ON_NurbsCurve onc;
+	ON_2dVector T1 = c_s.GetTangent(c_s.m_theta0);
+	ON_2dVector T2 = c_s.GetTangent(c_s.m_theta1);
+	if (c_s.m_is_mirror)
+	{
+		ON_Xform mirror;
+		mirror.Mirror(c_s.m_PS, ON_3dVector::CrossProduct(ON_3dVector::ZAxis, c_s.m_PE - c_s.m_PS));
+		for (ON_3dPoint& p : pv)
+		{
+			p.Transform(mirror);
+		}
+		T1.Transform(mirror);
+		T2.Transform(mirror);
+	}
+	ThreeDegreeBsplineInterplate_Tan(onc, pv, knot, T1, T2);
+	return onc;
+}
+
 double Cornu_Spiral::Compute_C(double theta)
 {
-	const double pi = acos(-1.0);
 	int n = 1000;
 	double sum = 0;
 	for (int k = 1; k <= n; k++)
 	{
 		sum += cos(theta * (k * k - k + 0.25) / n / n);
 	}
-	return sum * sqrt(2 * theta / pi) / n;
+	return sum * sqrt(2 * theta / PI) / n;
 }
 
 double Cornu_Spiral::Compute_S(double theta)
 {
-	const double pi = acos(-1.0);
 	int n = 1000;
 	double sum = 0;
 	for (int k = 1; k <= n; k++)
 	{
 		sum += sin(theta * (k * k - k + 0.25) / n / n);
 	}
-	return sum * sqrt(2 * theta / pi) / n;
+	return sum * sqrt(2 * theta / PI) / n;
 }
 
 double Cornu_Spiral::Compute_f(double theta, double phi1, double phi2)
@@ -155,6 +280,95 @@ double Cornu_Spiral::MidSection_g(double phi1, double phi2)
 	}
 }
 
+bool Cornu_Spiral::Check_And_Init(ON_2dPoint& ps, ON_2dPoint& pe, ON_2dVector& vs, ON_2dVector& ve)
+{
+	m_PS = ps;
+	m_PE = pe;
+	ON_2dVector D = pe - ps;
+	if (!D.Unitize() || !vs.Unitize() || !ve.Unitize())
+	{
+		return false;
+	}
+	double phi1 = ChiralityMath::ComputeSignedAngle(vs, D);
+	double phi2 = ChiralityMath::ComputeSignedAngle(D, ve);
+	constexpr double angle_error = 1e-3;
+	if (abs(phi1) < angle_error || abs(phi2) < angle_error || 
+		abs(phi1 + phi2) < angle_error || abs(phi1 - phi2) < angle_error)
+	{
+		return false;
+	}
+	if (abs(phi1 - PI) < angle_error || abs(phi1 + PI) < angle_error ||
+		abs(phi2 - PI) < angle_error || abs(phi2 + PI) < angle_error)
+	{
+		return false;
+	}
+	if (phi1 > 0 && phi2 > 0)
+	{
+		if (phi1 < phi2)
+		{
+			return true;
+		}
+		std::swap(ps, pe);
+		ON_2dVector new_vs = ve - 2 * ON_3dVector::DotProduct(ve, D) * D;
+		ON_2dVector new_ve = vs - 2 * ON_3dVector::DotProduct(vs, D) * D;
+		vs = new_vs;
+		ve = new_ve;
+		m_is_mirror = true;
+		m_is_reverse = true;
+		return true;
+	}
+	else if (phi1 < 0 && phi2 < 0)
+	{
+		if (phi1 < phi2)
+		{
+			std::swap(ps, pe);
+			ON_2dVector new_vs = -ve;
+			ON_2dVector new_ve = -vs;
+			vs = new_vs;
+			ve = new_ve;
+			m_is_reverse = true;
+			return true;
+		}
+		vs = -vs + 2 * ON_3dVector::DotProduct(vs, D) * D;
+		ve = -ve + 2 * ON_3dVector::DotProduct(ve, D) * D;
+		m_is_mirror = true;
+		return true;
+	}
+	else if (phi1 < 0 && phi2 > 0)
+	{
+		if (phi1 + phi2 > 0)
+		{
+			return true;
+		}
+		std::swap(ps, pe);
+		ON_2dVector new_vs = -ve;
+		ON_2dVector new_ve = -vs;
+		vs = new_vs;
+		ve = new_ve;
+		m_is_reverse = true;
+		return true;
+	}
+	else if (phi1 > 0 && phi2 < 0)
+	{
+		if (phi1 + phi2 > 0)
+		{
+			std::swap(ps, pe);
+			ON_2dVector new_vs = ve - 2 * ON_3dVector::DotProduct(ve, D) * D;
+			ON_2dVector new_ve = vs - 2 * ON_3dVector::DotProduct(vs, D) * D;
+			vs = new_vs;
+			ve = new_ve;
+			m_is_mirror = true;
+			m_is_reverse = true;
+			return true;
+		}
+		vs = -vs + 2 * ON_3dVector::DotProduct(vs, D) * D;
+		ve = -ve + 2 * ON_3dVector::DotProduct(ve, D) * D;
+		m_is_mirror = true;
+		return true;
+	}
+	return false;
+}
+
 void Cornu_Spiral::Add_to_Model(ONX_Model *model, const wchar_t *name, ON_Color color)
 {
 	ON_3dPointArray list;
@@ -218,22 +432,22 @@ ON_2dVector Cornu_Spiral::GetTangent(double theta)
 	return m_T0 * cos(theta) - m_N0 * sin(theta);
 }
 
-double Cornu_Spiral::GetSignedArcLength(double theta)
+double Cornu_Spiral::GetSignedArcLength(double theta) const
 {
 	if (theta >= 0)
 	{
-		return m_a * sqrt(2 * theta / acos(-1.0));
+		return m_a * sqrt(2 * theta / PI);
 	}
-	return -m_a * sqrt(-2 * theta / acos(-1.0));
+	return -m_a * sqrt(-2 * theta / PI);
 }
 
-double Cornu_Spiral::GetSignedCurvature(double theta)
+double Cornu_Spiral::GetSignedCurvature(double theta) const
 {
 	if (theta >= 0)
 	{
-		return sqrt(2 * theta * acos(-1.0)) / m_a;
+		return sqrt(2 * theta * PI) / m_a;
 	}
-	return -sqrt(-2 * theta * acos(-1.0)) / m_a;
+	return -sqrt(-2 * theta * PI) / m_a;
 }
 
 void Cornu_Spiral::Raise_to_3D(double zheight, ONX_Model *model, const wchar_t *name, ON_Color color)

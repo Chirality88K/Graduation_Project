@@ -12,6 +12,9 @@ namespace EulerBspline2D
 	void Smoothing3DControlPolygon(ON_NurbsCurve &onc, ON_3dPoint Pa, ON_3dPoint Pb, ON_3dVector Ta, ON_3dVector Tb);
 	ON_NurbsCurve GenerateSmoothingCorner(ON_3dPoint start,ON_3dPoint corner,ON_3dPoint end);
 	void SmoothCornerTest(ONX_Model* model);
+
+	double Compute_delta_theta(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, int cv_cnt);
+	ON_NurbsCurve ComputeEulerBspline2D_Directly(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, double& error);
 }
 
 #endif

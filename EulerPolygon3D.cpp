@@ -5,7 +5,7 @@
 #include "ChiralityLog.h"
 #include <locale>
 #include <codecvt>
-extern const double PI;
+
 PolarPoint3d::PolarPoint3d(double theta, double phi, double dis)
 {
 	mDistance = dis;

@@ -1,7 +1,6 @@
 #include "DiscreteSpiral.h"
 #include <assert.h>
 #include "thirdparty/eigen/Eigen/Dense"
-extern const double PI;
 
 void DiscreteSpiral::SimpleTest(ONX_Model* model, const FrenetFrame& f1, const FrenetFrame& f2, const std::string& name)
 {
@@ -28,7 +27,7 @@ ON_NurbsCurve DiscreteSpiral::Interpolate(const FrenetFrame& f1, const FrenetFra
 		}
 		if (max_iter <= 0)
 		{
-			CHIRALITY_WARN(std::string("µü´ú´ÎÊýÌ«¶àÁË£¬»¹Ã»µü´úºÃ£¡£¡"));
+			CHIRALITY_WARN(std::string("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì«ï¿½ï¿½ï¿½Ë£ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½"));
 		}
 	}
 	return ds.GetBezier();
@@ -72,7 +71,7 @@ void DiscreteSpiral::TestExit(ONX_Model* model)
 			}
 			if (max_iter <= 0)
 			{
-				CHIRALITY_WARN(std::string("µü´ú´ÎÊýÌ«¶àÁË£¬»¹Ã»µü´úºÃ£¡£¡"));
+				CHIRALITY_WARN(std::string("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì«ï¿½ï¿½ï¿½Ë£ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½"));
 			}
 		}
 		ON_NurbsCurve onc = ds.GetBezier();

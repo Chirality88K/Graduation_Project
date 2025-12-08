@@ -1,7 +1,6 @@
 #include "ClassA_Bezier.h"
 #include "write3dm.h"
 #include "ChiralityMathTools.h"
-extern const double PI;
 
 void ClassA_Bezier::ClassATest(ONX_Model* model)
 {

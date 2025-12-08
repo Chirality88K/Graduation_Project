@@ -1,5 +1,7 @@
 #include "EulerBezier2D.h"
 #include "write3dm.h"
+#include "ChiralityMathTools.h"
+#include <assert.h>
 
 namespace EulerBezier2D
 {
@@ -330,6 +332,93 @@ namespace EulerBezier2D
 		return onc1;
 	}
 
+	ON_NurbsCurve SmoothingCornerWithSlope(ON_3dPoint start, ON_3dPoint corner, ON_3dPoint end, double alpha)
+	{
+		ON_3dVector v0 = corner - start;
+		ON_3dVector v1 = end - corner;
+		double product = ON_3dVector::DotProduct(v0, v1) / v1.Length() / v0.Length();
+		double PHI = acos(product);
+		if (v0.x * v1.y - v0.y * v1.x < 0)
+		{
+			PHI = -PHI;
+		}
+		ON_BezierCurve part1;
+		ON_BezierCurve part2;
+		int n = 4;
+		ON_3dVector Ts = v0;
+		Ts.Unitize();
+		while (n < 20)
+		{
+			double sum = 0.0;
+			for (int k = 1; k <= n - 2; ++k)
+			{
+				sum += pow(k, -1 / alpha);
+			}
+			double deltatheta_alpha = PHI / sum / 2;
+			ON_3dVector temp = Ts;
+			ON_3dVector D = Ts;
+			for (int i = 0; i < n - 1; ++i)
+			{
+				if (i < 2)
+				{
+					temp.Rotate(deltatheta_alpha * i, ON_3dVector(0, 0, 1));
+				}
+				else
+				{
+					temp.Rotate(deltatheta_alpha * pow(i, -1 / alpha), ON_3dVector(0, 0, 1));
+				}
+				D += temp;
+			}
+			double pro = ON_3dVector::DotProduct(D, Ts) / D.Length();
+			pro = (std::min)(1.0, pro);
+			pro = (std::max)(-1.0, pro);
+			double beta = acos(pro);
+			if (Ts.x * D.y - Ts.y * D.x < 0) {
+				beta = -beta;
+			}
+			double length = cos(PHI / 2) / cos(PHI / 2 - beta) * v0.Length() / D.Length();
+			temp = Ts * length;
+			double theta_n_2 = pow(n - 3, -1 / alpha) * deltatheta_alpha;
+			double theta_n_1 = pow(n - 2, -1 / alpha) * deltatheta_alpha;
+			double s1 = -(n + 1) * sin(theta_n_1) - (n - 2) * sin(theta_n_1 + theta_n_2) + 3 * (n - 1) * cos(theta_n_1) * sin(theta_n_1);
+			if (s1 * deltatheta_alpha > 0 || n == 19)
+			{
+				part1.Create(3, false, n + 1);
+				part1.SetCV(0, start);
+				ON_3dPoint p = start;
+				for (int i = 0; i < n; ++i)
+				{
+					p += temp;
+					part1.SetCV(i + 1, p);
+					if (i < 2)
+					{
+						temp.Rotate(deltatheta_alpha * i, ON_3dVector(0, 0, 1));
+					}
+					else
+					{
+						temp.Rotate(deltatheta_alpha * pow(i, -1 / alpha), ON_3dVector(0, 0, 1));
+					}
+				}
+				break;
+			}
+			else
+			{
+				++n;
+			}
+		}
+		v0.Unitize();
+		v1.Unitize();
+		GenerateSymmetry(&part2, &part1, corner, v0 - v1);
+		ON_NurbsCurve onc1;
+		part1.GetNurbForm(onc1);
+		ON_NurbsCurve onc2;
+		part2.GetNurbForm(onc2);
+		onc2.Reverse();
+		onc1.Append(onc2);
+		onc1.SetDomain(0, 1);
+		return onc1;
+	}
+
 	void GenerateSymmetry(ON_BezierCurve *result, const ON_BezierCurve *OBC, ON_3dPoint O, ON_3dVector v)
 	{
 		v.Unitize();
@@ -454,5 +543,186 @@ namespace EulerBezier2D
 			ChiralityAddNurbsCurve(model, onc, L"curve" + std::to_wstring(i + 1), curves_layer_index);
 			ChiralityDebugforR(onc, "Bezier 2d debug for R " + std::to_string(i));
 		}
+	}
+
+	double Compute_delta_theta(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, int cv_cnt)
+	{
+		const double alpha = ChiralityMath::ComputeSignedAngle(pe - ps, vs);
+		const double beta = ChiralityMath::ComputeSignedAngle(pe - ps, ve);
+		const int n = cv_cnt - 1;
+		auto F = [alpha, beta, n](double delta_theta)->double {
+			double sum = 0.0;
+			for (int k = 1; k <= n; ++k)
+			{
+				sum += sin(alpha * double(n - k) / double(n - 1) + beta * double(k - 1) / double(n - 1) - 0.5 * (k - 1) * (n - k) * delta_theta);
+			}
+			return sum;
+		};
+
+		auto DF = [alpha, beta, n](double delta_theta)->double {
+			double sum = 0.0;
+			for (int k = 2; k <= n - 1; ++k)
+			{
+				sum += cos(alpha * double(n - k) / double(n - 1) + beta * double(k - 1) / double(n - 1) - 0.5 * (k - 1) * (n - k) * delta_theta)
+					* (-0.5 * (k - 1) * (n - k));
+			}
+			return sum;
+		};
+		//double x0 = ChiralityMath::Newton(F, DF, 0.0);
+		//double x1 = ChiralityMath::Newton(F, DF, 0.001);
+		//double x2 = ChiralityMath::Newton(F, DF, -0.001);
+		//double x = abs(x0) < abs(x1) ? x0 : x1;
+		//x = abs(x) < abs(x2) ? x : x2;
+
+		const double F_0 = F(0.0);
+		double s_theta = -5.0 / cv_cnt;
+		double e_theta = 5.0 / cv_cnt;
+		constexpr int N = 100;
+		double t_e = 10;
+
+		int k = (n + 1) / 2;
+		double alpha_gap = alpha > 0 ? PI - alpha : PI + alpha;
+		double beta_gap = beta > 0 ? PI - beta : PI + beta;
+		double t_max = (std::max)(alpha_gap, beta_gap) * 2 / (k - 1) / (n - k);
+
+		if (alpha * beta > 0)
+		{
+			double step = alpha > 0 ? t_max / N : -t_max / N;
+			double t = step;
+			while (F(t) * F_0 > 0)
+			{
+				t += step;
+			}
+			t_e = t;
+		}
+		else
+		{
+			double step = t_max / N;
+			double t = step;
+			while (F(t) * F_0 > 0 && F(-t) * F_0 > 0)
+			{
+				t += step;
+			}
+			t_e = F(t) * F_0 > 0 ? -t : t;
+		}
+		assert(t_e < 10);
+		double t_s = 0.0;
+		if (t_s > t_e)
+		{
+			std::swap(t_s, t_e);
+		}
+		double x = ChiralityMath::Bisection(F, t_s, t_e);
+		return x;
+	}
+
+	ON_BezierCurve ComputeEulerBezier2D_Directly(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, int cv_cnt, double& error)
+	{
+		bool pass = false;
+		const int max_cv_cnt = 50;
+		cv_cnt = (std::max)(10, cv_cnt);
+		cv_cnt = (std::min)(max_cv_cnt - 1, cv_cnt);
+		std::vector<double> angles;
+		angles.reserve(max_cv_cnt);
+		double sum = 0.0;
+		double alpha = ChiralityMath::ComputeSignedAngle(pe - ps, vs);
+		double beta = ChiralityMath::ComputeSignedAngle(pe - ps, ve);
+		while (!pass && cv_cnt < max_cv_cnt)
+		{
+			angles.clear();
+			int n = cv_cnt - 1;
+			double delta_theta = Compute_delta_theta(ps, pe, vs, ve, cv_cnt);
+			pass = true;
+			for (int k = 1; k <= n; ++k)
+			{
+				angles.push_back(alpha * double(n - k) / double(n - 1) + beta * double(k - 1) / double(n - 1)
+					- 0.5 * (k - 1) * (n - k) * delta_theta);
+				if (abs(angles.back()) >= PI)
+				{
+					pass = false;
+				}
+				if (k > 1 && abs(angles[k - 1] - angles[k - 2]) >= PI / 2)
+				{
+					pass = false;
+				}
+			}
+			if (pass)
+			{
+				double a1 = angles[1] - angles[0];
+				double a2 = angles[2] - angles[1];
+				double an_1 = angles[n - 1] - angles[n - 2];
+				double an_2 = angles[n - 2] - angles[n - 3];
+				double Deltatheta = (an_2 - a1);
+				double s0 = (n + 1) * sin(a1) + (n - 2) * sin(a1 + a2) - 3 * (n - 1) * sin(a1) * cos(a1);
+				double s1 = -(n + 1) * sin(an_1) - (n - 2) * sin(an_2 + an_1) + 3 * (n - 1) * sin(an_1) * cos(an_1);
+				pass = Deltatheta * s0 >= 0 && s0 * s1 >= 0;
+			}
+			++cv_cnt;
+		}
+		cv_cnt = angles.size() + 1;
+		//assert(sum > 1e-6);
+		sum = 0.0;
+		for (double t : angles)
+		{
+			sum += cos(t);
+		}
+		double L = ps.DistanceTo(pe) / sum;
+		if (L < 0)
+		{
+			L = -L;
+		}
+		ON_BezierCurve obc(2, false, cv_cnt);
+		vs.Unitize(); ve.Unitize();
+		obc.SetCV(0, ON_3dPoint(ps.x, ps.y, 0.0));
+		ON_3dPoint P = ps;
+		for (int i = 1; i < cv_cnt; ++i)
+		{
+			ON_3dVector v = pe - ps;
+			v.Unitize();
+			v.Rotate(angles[i - 1], ON_3dVector::ZAxis);
+			P = P + L * v;
+			obc.SetCV(i, P);
+		}
+		error = obc.PointAt(0).DistanceTo(ps) + obc.PointAt(1).DistanceTo(pe) +
+			(obc.TangentAt(0) - vs).Length() + (obc.TangentAt(1) - ve).Length();
+		if (error > 1e-6)
+		{
+			CHIRALITY_WARN(std::string("Euler_Bezier!!"));
+			std::cout << "Direct Error: " << error << "\n";
+		}
+		return obc;
+	}
+
+	double Compute_L_for_fixed_cv_cnt(ON_2dPoint ps, ON_2dPoint pe, ON_2dVector vs, ON_2dVector ve, int cv_cnt, double* angs)
+	{
+		assert(cv_cnt >= 10);
+		double delta_theta = Compute_delta_theta(ps, pe, vs, ve, cv_cnt);
+		double alpha = ChiralityMath::ComputeSignedAngle(pe - ps, vs);
+		double beta = ChiralityMath::ComputeSignedAngle(pe - ps, ve);
+		std::vector<double> angles;
+		int n = cv_cnt - 1;
+		angles.reserve(n);
+		for (int k = 1; k <= n; ++k)
+		{
+			angles.push_back(alpha * double(n - k) / double(n - 1) + beta * double(k - 1) / double(n - 1)
+				- 0.5 * (k - 1) * (n - k) * delta_theta);
+		}
+		if (angs != nullptr)
+		{
+			for (int i = 0; i < angles.size(); ++i)
+			{
+				*(angs + i) = angles[i];
+			}
+		}
+		double sum = 0.0;
+		for (double t : angles)
+		{
+			sum += cos(t);
+		}
+		double L = ps.DistanceTo(pe) / sum;
+		if (L < 0)
+		{
+			L = -L;
+		}
+		return L;
 	}
 }
